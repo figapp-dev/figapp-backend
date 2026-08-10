@@ -12,4 +12,8 @@ export const ErrorMessages = {
 
   PROFILE_NOT_FOUND: "Profile not found",
   PROFILE_LOAD_FAILED: "Failed to load profile",
+
+  CHILDREN_LOAD_FAILED: "Failed to load children",
+  CHILD_NOT_FOUND: "Child not found",
+  CHILD_LOAD_FAILED: "Failed to load child",
 } as const;
