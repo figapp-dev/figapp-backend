@@ -12,4 +12,8 @@ export const TABLES = {
   CHILD_MEDICAL_CONDITIONS: "child_medical_conditions",
   CHILD_EMERGENCY_CONTACTS: "child_emergency_contacts",
   CHILD_PROFESSIONAL_CONTACTS: "child_professional_contacts",
+
+  DAILY_LOG_ASSIGNMENTS: "daily_log_assignments",
+  DAILY_LOGS: "daily_logs",
+  DAILY_LOG_TEMPLATES: "daily_log_templates",
 } as const;

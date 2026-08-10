@@ -13,6 +13,7 @@ import type {
   CurrentPlacementRow,
   HouseholdChildRow,
   MedicalConditionRow,
+  PlacementsDto,
 } from "../types/children.js";
 import {
   toChildDetailDto,
@@ -20,6 +21,7 @@ import {
   toLinkedChildSummaryDto,
   toPlacedParentDetailDto,
   toPlacedParentListItemDto,
+  toPlacementHistoryItemDto,
 } from "../mappers/children.js";
 
 const PARENT_CHILD_PLACEMENT_TYPE_CODE = "parent_child";
@@ -60,6 +62,24 @@ const PARENT_PLACEMENT_SELECT = `
   child_id,
   start_date,
   end_date,
+  is_active,
+  carer_households:household_id (
+    id,
+    name,
+    address_line1,
+    address_line2,
+    city,
+    postal_code,
+    country
+  )
+`;
+
+const PLACEMENT_HISTORY_SELECT = `
+  id,
+  child_id,
+  start_date,
+  end_date,
+  is_active,
   carer_households:household_id (
     id,
     name,
@@ -307,6 +327,31 @@ async function assertChildAccessibleToCarer(
     .eq("child_id", childId)
     .eq("is_active", true)
     .is("end_date", null)
+    .in("household_id", householdIds)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return { allowed: false, error };
+  }
+
+  return { allowed: !!data, error: null };
+}
+
+/** Any placement (active or ended) in the carer's households. */
+async function assertChildHasPlacementInCarerHouseholds(
+  supabase: SupabaseClient,
+  childId: string,
+  householdIds: string[],
+): Promise<{ allowed: boolean; error: Error | null }> {
+  if (householdIds.length === 0) {
+    return { allowed: false, error: null };
+  }
+
+  const { data, error } = await supabase
+    .from(TABLES.HOUSEHOLD_CHILDREN)
+    .select("id")
+    .eq("child_id", childId)
     .in("household_id", householdIds)
     .limit(1)
     .maybeSingle();
@@ -609,4 +654,121 @@ async function loadPlacedParentDetail(
     ),
     error: null,
   };
+}
+
+async function loadChildPlacementHistory(
+  supabase: SupabaseClient,
+  childId: string,
+  householdIds: string[],
+): Promise<{ data: PlacementsDto | null; error: Error | null }> {
+  const { allowed, error: accessError } =
+    await assertChildHasPlacementInCarerHouseholds(
+      supabase,
+      childId,
+      householdIds,
+    );
+  if (accessError) {
+    return { data: null, error: accessError };
+  }
+  if (!allowed) {
+    return { data: null, error: null };
+  }
+
+  const { data: rows, error } = await supabase
+    .from(TABLES.HOUSEHOLD_CHILDREN)
+    .select(PLACEMENT_HISTORY_SELECT)
+    .eq("child_id", childId)
+    .in("household_id", householdIds)
+    .order("start_date", { ascending: false });
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  return {
+    data: {
+      kind: "child",
+      id: childId,
+      items: ((rows ?? []) as CurrentPlacementRow[]).map(
+        toPlacementHistoryItemDto,
+      ),
+    },
+    error: null,
+  };
+}
+
+async function loadPlacedParentPlacementHistory(
+  supabase: SupabaseClient,
+  parentId: string,
+  householdIds: string[],
+): Promise<{ data: PlacementsDto | null; error: Error | null }> {
+  if (householdIds.length === 0) {
+    return { data: null, error: null };
+  }
+
+  const { data: rows, error } = await supabase
+    .from(TABLES.BIOLOGICAL_PARENT_PLACEMENTS)
+    .select(PLACEMENT_HISTORY_SELECT)
+    .eq("biological_parent_id", parentId)
+    .in("household_id", householdIds)
+    .order("start_date", { ascending: false });
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  const placements = (rows ?? []) as CurrentPlacementRow[];
+  if (placements.length === 0) {
+    return { data: null, error: null };
+  }
+
+  const { data: parentRow, error: parentError } = await supabase
+    .from(TABLES.CHILD_BIOLOGICAL_PARENTS)
+    .select("id, date_of_birth")
+    .eq("id", parentId)
+    .maybeSingle();
+
+  if (parentError) {
+    return { data: null, error: parentError };
+  }
+  if (!parentRow || !isBiologicalParentUnder18(parentRow.date_of_birth)) {
+    return { data: null, error: null };
+  }
+
+  return {
+    data: {
+      kind: "placed_parent",
+      id: parentId,
+      items: placements.map(toPlacementHistoryItemDto),
+    },
+    error: null,
+  };
+}
+
+export async function listPlacementsForCarer(
+  supabase: SupabaseClient,
+  userId: string,
+  id: string,
+): Promise<{ data: PlacementsDto | null; error: Error | null }> {
+  const { householdIds, error: householdError } = await getActiveHouseholdIds(
+    supabase,
+    userId,
+  );
+  if (householdError) {
+    return { data: null, error: householdError };
+  }
+
+  const childResult = await loadChildPlacementHistory(
+    supabase,
+    id,
+    householdIds,
+  );
+  if (childResult.error) {
+    return childResult;
+  }
+  if (childResult.data) {
+    return childResult;
+  }
+
+  return loadPlacedParentPlacementHistory(supabase, id, householdIds);
 }

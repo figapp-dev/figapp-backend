@@ -204,5 +204,31 @@ export type CurrentPlacementRow = {
   id: string;
   start_date: string | null;
   end_date: string | null;
+  is_active?: boolean | null;
+  child_id?: string | null;
   carer_households: PlacementHouseholdRow | PlacementHouseholdRow[] | null;
 };
+
+export type PlacementHistoryItemDto = {
+  id: string;
+  startDate: string | null;
+  endDate: string | null;
+  isActive: boolean;
+  status: "Active" | "Scheduled" | "Ended" | null;
+  childId: string | null;
+  household: PlacementHouseholdDto | null;
+};
+
+export type ChildPlacementsDto = {
+  kind: "child";
+  id: string;
+  items: PlacementHistoryItemDto[];
+};
+
+export type PlacedParentPlacementsDto = {
+  kind: "placed_parent";
+  id: string;
+  items: PlacementHistoryItemDto[];
+};
+
+export type PlacementsDto = ChildPlacementsDto | PlacedParentPlacementsDto;

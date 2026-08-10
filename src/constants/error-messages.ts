@@ -16,4 +16,7 @@ export const ErrorMessages = {
   CHILDREN_LOAD_FAILED: "Failed to load children",
   CHILD_NOT_FOUND: "Child not found",
   CHILD_LOAD_FAILED: "Failed to load child",
+  PLACEMENTS_LOAD_FAILED: "Failed to load placements",
+
+  DAILY_LOGS_LOAD_FAILED: "Failed to load daily logs",
 } as const;
