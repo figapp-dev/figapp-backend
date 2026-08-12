@@ -1,48 +1,18 @@
-import { SupabaseClient } from "@supabase/supabase-js";
-import { TABLES } from "../lib/tables.js";
-import type { ProfileRow } from "../types/profile.js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { toProfileDto } from "../mappers/profile.js";
+import { findAgencyUserProfileByUserId } from "../repositories/profile.js";
+import type { ProfileDto } from "../types/profile.js";
 
-export async function getProfile(supabase: SupabaseClient, userId: string) {
-  const { data, error } = await supabase
-    .from(TABLES.AGENCY_USERS)
-    .select(
-      `
-      id,
-      user_id,
-      email,
-      first_name,
-      last_name,
-      preferred_name,
-      phone,
-      role,
-      position,
-      job_title,
-      date_of_birth,
-      gender,
-      figapp_id,
-      status,
-      is_active,
-      agencies (
-        id,
-        name
-      ),
-      carer_households (
-        id,
-        name,
-        address_line1,
-        address_line2,
-        city,
-        postal_code,
-        country
-      )
-    `,
-    )
-    .eq("user_id", userId)
-    .eq("is_archived", false)
-    .maybeSingle();
-
-  return {
-    data: data as ProfileRow | null,
-    error,
-  };
+export async function getProfile(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ data: ProfileDto | null; error: Error | null }> {
+  const { data, error } = await findAgencyUserProfileByUserId(supabase, userId);
+  if (error) {
+    return { data: null, error };
+  }
+  if (!data) {
+    return { data: null, error: null };
+  }
+  return { data: toProfileDto(data), error: null };
 }

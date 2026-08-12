@@ -1,3 +1,5 @@
+import { buildChildDisplayName } from "../lib/child-names.js";
+import { getPlacementDisplayStatus } from "../lib/placement-status.js";
 import type {
   AllergyDto,
   AllergyRow,
@@ -13,24 +15,13 @@ import type {
   LinkedChildSummaryDto,
   MedicalConditionDto,
   MedicalConditionRow,
+  PlacementHistoryItemDto,
+  PlacementHouseholdDto,
+  PlacementHouseholdRow,
   PlacedParentDetailDto,
   PlacedParentListItemDto,
   ProfessionalContactDto,
 } from "../types/children.js";
-
-function buildChildDisplayName(row: ChildListRow): string {
-  if (row.preferred_name?.trim()) {
-    return row.preferred_name.trim();
-  }
-
-  const parts = [row.first_name, row.middle_name, row.last_name]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-
-  if (parts) return parts;
-  return row.legal_name?.trim() || "Unknown child";
-}
 
 export function toChildListItemDto(
   row: ChildListRow,
@@ -111,31 +102,50 @@ function toProfessionalContactDto(row: ContactRow): ProfessionalContactDto {
   };
 }
 
+function toPlacementHouseholdDto(
+  householdRaw: PlacementHouseholdRow | PlacementHouseholdRow[] | null,
+): PlacementHouseholdDto | null {
+  const household = Array.isArray(householdRaw)
+    ? (householdRaw[0] ?? null)
+    : householdRaw;
+
+  if (!household) return null;
+
+  return {
+    id: household.id,
+    name: household.name,
+    addressLine1: household.address_line1,
+    addressLine2: household.address_line2,
+    city: household.city,
+    postalCode: household.postal_code,
+    country: household.country,
+  };
+}
+
 function toCurrentPlacementDto(
   row: CurrentPlacementRow | null,
 ): CurrentPlacementDto | null {
   if (!row) return null;
 
-  const householdRaw = row.carer_households;
-  const household = Array.isArray(householdRaw)
-    ? (householdRaw[0] ?? null)
-    : householdRaw;
-
   return {
     id: row.id,
     startDate: row.start_date,
     endDate: row.end_date,
-    household: household
-      ? {
-          id: household.id,
-          name: household.name,
-          addressLine1: household.address_line1,
-          addressLine2: household.address_line2,
-          city: household.city,
-          postalCode: household.postal_code,
-          country: household.country,
-        }
-      : null,
+    household: toPlacementHouseholdDto(row.carer_households),
+  };
+}
+
+export function toPlacementHistoryItemDto(
+  row: CurrentPlacementRow,
+): PlacementHistoryItemDto {
+  return {
+    id: row.id,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    isActive: row.is_active === true,
+    status: getPlacementDisplayStatus(row),
+    childId: row.child_id ?? null,
+    household: toPlacementHouseholdDto(row.carer_households),
   };
 }
 
