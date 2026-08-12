@@ -1,15 +1,19 @@
 import type { FastifyInstance } from "fastify";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
+import { env } from "../config/env.js";
 import { registerOpenApiSchemas } from "./openapi-schemas.js";
 
 /**
- * OpenAPI 3 + Swagger UI for Flutter / Postman clients.
- * UI:    GET /docs
- * Spec:  GET /docs/json  (also /documentation/json via plugin defaults if configured)
+ * OpenAPI schemas always register (route $refs).
+ * Swagger UI (/docs) only when env.enableDocs is true.
  */
 export async function registerSwagger(app: FastifyInstance) {
   registerOpenApiSchemas(app);
+
+  if (!env.enableDocs) {
+    return;
+  }
 
   await app.register(swagger, {
     openapi: {
@@ -17,8 +21,11 @@ export async function registerSwagger(app: FastifyInstance) {
       info: {
         title: "FigApp Backend API",
         description:
-          "Mobile API for FigApp (foster_carer). Use Bearer JWT from Supabase Auth. " +
-          "Response shapes here are the source of truth for Flutter models.",
+          "Production mobile API for FigApp (foster_carer). Use Bearer JWT from Supabase Auth. " +
+          "Response shapes here are the source of truth for Flutter models.\n\n" +
+          "Error `code` values: VALIDATION_ERROR (schema), VALIDATION_FAILED (submit fields), " +
+          "EXPECTED_UPDATED_AT_REQUIRED, CONFLICT, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, " +
+          "NOT_FOUND, INTERNAL_ERROR.",
         version: "1.0.0",
       },
       components: {

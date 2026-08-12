@@ -1,9 +1,13 @@
 import Fastify from "fastify";
 import sensible from "@fastify/sensible";
+import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
+import { env } from "./config/env.js";
 import { registerSwagger } from "./plugins/swagger.js";
 import { registerRoutes } from "./routes/index.js";
 import { AppError } from "./lib/errors.js";
 import { ErrorMessages } from "./constants/error-messages.js";
+import { formatValidationMessage } from "./lib/validation-errors.js";
 
 function isFastifyValidationError(
   error: unknown,
@@ -18,13 +22,23 @@ function isFastifyValidationError(
 
 export async function buildApp() {
   const app = Fastify({
-    logger: true,
+    trustProxy: true,
+    requestIdHeader: "x-request-id",
+    logger:
+      env.nodeEnv === "test"
+        ? false
+        : {
+            level: env.isProduction ? "info" : "debug",
+            redact: {
+              paths: [
+                "req.headers.authorization",
+                "req.headers.cookie",
+                "req.headers['authorization']",
+              ],
+              censor: "[Redacted]",
+            },
+          },
   });
-
-  await app.register(sensible);
-  // Swagger must register before routes so every route is documented.
-  await registerSwagger(app);
-  await app.register(registerRoutes);
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
@@ -32,6 +46,7 @@ export async function buildApp() {
         statusCode: error.statusCode,
         code: error.code,
         message: error.message,
+        ...error.details,
       });
     }
 
@@ -39,7 +54,10 @@ export async function buildApp() {
       return reply.status(400).send({
         statusCode: 400,
         code: "VALIDATION_ERROR",
-        message: error.message || ErrorMessages.VALIDATION_ERROR,
+        message: formatValidationMessage(
+          error.validation,
+          ErrorMessages.VALIDATION_ERROR,
+        ),
       });
     }
 
@@ -52,7 +70,8 @@ export async function buildApp() {
       return reply.status(statusCode).send({
         statusCode,
         code:
-          typeof (error as { code?: unknown }).code === "string"
+          typeof (error as { code?: unknown }).code === "string" &&
+          (error as { code: string }).code !== "FST_ERR_VALIDATION"
             ? (error as { code: string }).code
             : "BAD_REQUEST",
         message:
@@ -68,6 +87,24 @@ export async function buildApp() {
       message: ErrorMessages.INTERNAL_ERROR,
     });
   });
+
+  app.addHook("onRequest", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+  });
+
+  await app.register(sensible);
+  await app.register(cors, {
+    origin: env.corsOrigins,
+  });
+  await app.register(rateLimit, {
+    max: env.rateLimitMax,
+    timeWindow: env.rateLimitWindow,
+    allowList: (request) => request.url.split("?")[0] === "/health",
+  });
+
+  // Swagger must register before routes so every route is documented (when enabled).
+  await registerSwagger(app);
+  await app.register(registerRoutes);
 
   return app;
 }
