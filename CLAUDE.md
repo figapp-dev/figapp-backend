@@ -66,7 +66,7 @@ Repo is intended for GitHub → Railway auto-deploy.
 - `NODE_ENV=production` (optional; Railway often sets this)
 - `PORT` — do not set; Railway injects it
 
-**Config:** `railway.toml` builds with `npm ci && npm run build`, starts with `npm start`, healthchecks `GET /health`.
+**Config:** `railway.toml` builds with `npm run build` only (Nixpacks already runs `npm ci`; do not duplicate it — causes EBUSY), starts with `npm start`, healthchecks `GET /health`.
 
 **Local env:** copy `.env.example` → `.env` (gitignored).
 
