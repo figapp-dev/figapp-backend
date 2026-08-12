@@ -3,21 +3,52 @@
  * (UK calendar dates via Europe/London).
  */
 
+import { getTodayUKDateString, toDateOnly } from "./dates.js";
+
 export type PlacementDisplayStatus = "Active" | "Scheduled" | "Ended";
 
-/** Calendar date in UK as YYYY-MM-DD. */
-export function getTodayUKDateString(onDate: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/London",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(onDate);
+/**
+ * Whether a household_children placement row counts as currently placed.
+ * Matches web isCurrentlyActivePlacement.
+ */
+export function isCurrentlyActivePlacement(placement?: {
+  start_date?: string | null;
+  end_date?: string | null;
+  is_active?: boolean | null;
+}): boolean {
+  if (!placement || placement.is_active !== true) return false;
+
+  const today = getTodayUKDateString();
+  const start = toDateOnly(placement.start_date);
+  const end = toDateOnly(placement.end_date);
+
+  if (start && start > today) return false;
+  if (end && end < today) return false;
+
+  return true;
 }
 
-function toDateOnly(value?: string | null): string | null {
-  if (!value) return null;
-  return value.slice(0, 10);
+/**
+ * Whether a household_carers link is active for today (UK dates).
+ * Matches web isActiveHouseholdLinkForToday.
+ */
+export function isActiveHouseholdLinkForToday(row?: {
+  household_id?: string | null;
+  is_active?: boolean | null;
+  start_date?: string | null;
+  end_date?: string | null;
+}): boolean {
+  if (!row?.household_id) return false;
+  if (row.is_active === false) return false;
+
+  const today = getTodayUKDateString();
+  const start = toDateOnly(row.start_date);
+  const end = toDateOnly(row.end_date);
+
+  if (start && start > today) return false;
+  if (end && end < today) return false;
+
+  return true;
 }
 
 /**
