@@ -1,12 +1,15 @@
-# Railway: build TypeScript, run compiled server, probe /health.
-# Env vars (set in Railway Variables — never commit secrets):
+# Railway: Nixpacks already runs `npm ci` in the install phase.
+# Do NOT put `npm ci` in buildCommand — a second install causes
+# EBUSY on node_modules/.cache under NODE_ENV=production.
+#
+# Env vars (Railway Variables — never commit secrets):
 #   SUPABASE_URL
 #   SUPABASE_PUBLISHABLE_KEY
 #   PORT is injected by Railway
 
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm ci && npm run build"
+buildCommand = "npm run build"
 
 [deploy]
 startCommand = "npm start"
