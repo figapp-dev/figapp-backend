@@ -1,6 +1,8 @@
 # FigApp Backend (Node.js) — Project Context for Claude Code
 
-Dedicated Node.js API server for the FigApp mobile app (Flutter, foster carer role first). The developer is writing all implementation code themselves in Cursor — this file is context/reference only. Do not write route/middleware implementation code unless explicitly asked; this doc exists so any assistant helping here (planning, review, debugging) has full background.
+Dedicated Node.js API server for the FigApp mobile app (Flutter, foster carer role first).
+
+**This is production software**, not an MVP prototype. Assistants must default to production-quality patterns (authz, schemas, errors, tests, ops hardening). Do not suggest “ship basic now, harden later” unless the user explicitly asks for a throwaway spike. The developer often writes implementation themselves in Cursor — this file is context/reference; still treat every change as production-bound.
 
 ---
 
@@ -18,11 +20,11 @@ This backend serves the **mobile app only** (Flutter, foster_carer role first, e
 
 ## Stack
 
-- Fastify (chosen over Express for schema validation + lower overhead; chosen over NestJS to avoid stacking a second steep learning curve while learning Node.js itself)
-- TypeScript (light touch — don't fight the type system early, `any` is an acceptable escape hatch while learning)
-- `@supabase/supabase-js` for all DB access (no raw `pg`/ORM — RLS is enforced via the forwarded-JWT client, not by writing SQL directly)
-- Vitest for tests
-- Deployed on Railway, connected to GitHub for auto-deploy
+- Fastify (schema validation, low overhead)
+- TypeScript
+- `@supabase/supabase-js` for all DB access (no raw `pg`/ORM — RLS via forwarded-JWT client)
+- Vitest for unit + smoke tests
+- Deployed on Railway (GitHub auto-deploy), custom domain e.g. `api.figapp.co.uk`
 
 ## Suggested structure
 
@@ -44,37 +46,64 @@ src/
   types/            DTO + row types
   config/           env
   server.ts / app.ts
-tests/              mirrors src (e.g. tests/lib/...); do not put tests under src/
+tests/              mirrors src (e.g. tests/lib/..., tests/smoke/...); do not put tests under src/
 ```
 
 Do not use Prisma/TypeORM `models/` for this project — `@supabase/supabase-js` with forwarded JWT is the data layer so RLS stays enforcement.
 
+## Production ops (required)
+
+- Logger redacts `Authorization` / cookies
+- Every response includes `x-request-id` (accept incoming `x-request-id` when present)
+- Graceful shutdown on `SIGTERM` / `SIGINT`
+- Rate limiting (default 200/min; `/health` excluded)
+- CORS: off by default in production unless `CORS_ORIGINS` is set (Flutter native does not need CORS)
+- `trustProxy: true` for Railway
+
 ## API docs (Swagger)
 
-- UI: `GET /docs` (local: http://localhost:8082/docs — use your PORT)
-- OpenAPI JSON: `GET /docs/json`
-- Authorize in Swagger UI with Supabase `access_token` (Bearer).
-- Use these schemas as the source of truth when generating Flutter `*.g.dart` / freezed models (or hand-write from the Schema section).
+- Enabled when `ENABLE_DOCS=true`, or by default in non-production
+- **Disabled in production** unless explicitly enabled
+- UI: `GET /docs` · OpenAPI JSON: `GET /docs/json`
+- Authorize with Supabase `access_token` (Bearer)
+- Source of truth for Flutter models when docs are enabled; otherwise use committed OpenAPI / staging docs
+
+## Error `code` vocabulary (stable for Flutter)
+
+All errors: `{ statusCode, code, message, ...optional fields }`.
+
+| code | When |
+|------|------|
+| `VALIDATION_ERROR` | Fastify/Ajv schema failure (friendly message) |
+| `VALIDATION_FAILED` | Submit missing required fields (+ `missingFieldIds`) |
+| `EXPECTED_UPDATED_AT_REQUIRED` | Log exists but PUT omitted lock (+ `currentUpdatedAt`) |
+| `CONFLICT` | Optimistic lock mismatch (+ `currentUpdatedAt`) |
+| `BAD_REQUEST` | Other 400s |
+| `UNAUTHORIZED` / `FORBIDDEN` / `NOT_FOUND` / `INTERNAL_ERROR` | Standard |
 
 ## Deploy (Railway)
 
 Repo is intended for GitHub → Railway auto-deploy.
 
 **Required Railway Variables** (Dashboard → Variables):
-- `SUPABASE_URL`
+- `SUPABASE_URL` (must be `https://…`)
 - `SUPABASE_PUBLISHABLE_KEY`
-- `NODE_ENV=production` (optional; Railway often sets this)
+- `NODE_ENV=production` (Railway often sets this)
 - `PORT` — do not set; Railway injects it
+
+**Optional:** `ENABLE_DOCS`, `CORS_ORIGINS`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW`
 
 **Config:** `railway.toml` builds with `npm run build` only (Nixpacks already runs `npm ci`; do not duplicate it — causes EBUSY), starts with `npm start`, healthchecks `GET /health`.
 
 **Local env:** copy `.env.example` → `.env` (gitignored).
 
-After deploy, confirm: `https://<your-railway-host>/health` → `{ "status": "ok", ... }`.
+After deploy, confirm: `https://api.figapp.co.uk/health` (or Railway host) → `{ "status": "ok", ... }`.
 
-## Deferred: API smoke tests
+## Tests
 
-Auth + route smoke tests (unauthenticated → 401, `/health` OK, etc.) are **intentionally deferred**. Implement under `tests/` before wider go-live; not blocking Railway health deploy.
+- Unit: `tests/lib/**`, `tests/services/**`
+- Smoke: `tests/smoke/api.smoke.test.ts` — `/health`, 401 on protected routes
+- Run: `npm test`
 
 ## New resource checklist (every API)
 
@@ -86,7 +115,7 @@ When adding FigChat, tasks, expenses, FCM, etc., ship **in the same change**:
 4. `mappers/<resource>.ts` — row → camelCase DTO
 5. `schemas/<resource>.ts` — write body schemas
 6. `types/<resource>.ts` — DTOs + row types
-7. `ErrorMessages` entries + reuse `lib/households`, UK date helpers, `tables.ts`
+7. `ErrorMessages` entries + `AppError` helpers + reuse `lib/households`, UK date helpers, `tables.ts`
 8. Vitest under `tests/` for any new pure validation/status helpers
 9. Use `serviceFailure` / `serviceSuccess` from `lib/service-result.ts` for mutate/result bags
 10. If the resource supports offline edits, expose `updatedAt` on the DTO and accept `expectedUpdatedAt` on writes (409 on mismatch)

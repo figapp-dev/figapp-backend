@@ -9,6 +9,11 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
     $id: "ErrorResponse",
     type: "object",
     required: ["statusCode", "code", "message"],
+    description:
+      "Stable error envelope. `code` values: VALIDATION_ERROR (JSON schema), " +
+      "VALIDATION_FAILED (submit missing fields + missingFieldIds), " +
+      "EXPECTED_UPDATED_AT_REQUIRED (+ currentUpdatedAt), CONFLICT (+ currentUpdatedAt), " +
+      "BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR.",
     properties: {
       statusCode: { type: "integer" },
       code: { type: "string" },

@@ -1,17 +1,18 @@
 ---
-description: FigApp backend engineering bar — prefer production-quality defaults, not basic patterns unless asked
+description: FigApp backend engineering bar — production-quality defaults always
 alwaysApply: true
 ---
 
 # FigApp Backend — Engineering Standards
 
-You are building a production API (Fastify + TS + Supabase JWT-forwarding/RLS). **Default to the best maintainable pattern for this codebase.** Do not ship a “basic” structure and upgrade only when the user objects.
+You are building a **production** API (Fastify + TS + Supabase JWT-forwarding/RLS) for live foster-care data. **This is not a prototype or MVP scaffold.** Default to production-quality patterns on every change. Do not ship “basic for now” and upgrade later.
 
 ## Mindset
 
 - When there are two valid options, pick the stronger one and briefly say why — don’t wait to be told.
 - If something is duplicated, incomplete for offline sync, or missing schema/tests for non-trivial logic, fix or flag it in the same change.
 - Keep CLAUDE.md security non-negotiables: forward user JWT; no `service_role` on user paths; signed URLs for storage.
+- Never describe or treat this codebase as “MVP-only” or “good enough for demo” unless the user explicitly scopes a throwaway spike.
 
 ## Default request flow (required for every resource)
 
@@ -31,45 +32,43 @@ tests/                     # mirrors src (e.g. tests/lib/...)
 
 ## New API checklist (do all of this in the same change)
 
-1. **Route** — `requireAuth` (unless public like `/health`); thin handler only
+1. **Route** — `requireAuth` (unless public like `/health`); thin handler only; throw `AppError` (including details)
 2. **Schema** — Fastify JSON Schema for every write body (`src/schemas/`)
 3. **Service** — business rules + orchestration; **no** `.from()` / storage I/O
 4. **Repository** — all Supabase/Storage access; returns `{ data, error }` (typed rows)
 5. **Mapper** — row → camelCase DTO; don’t leak snake_case tables to Flutter
 6. **Types** — request body + DTO + row types in `src/types/`
-7. **Errors** — `ErrorMessages` constants + `AppError` helpers
+7. **Errors** — `ErrorMessages` + `AppError` / helpers (`validationFailed`, `conflict`, …)
 8. **Authz** — identity from JWT/`getUser`; scope via household/RLS patterns already used
 9. **DTO flags** — if Flutter needs UI rules (`canEdit`, `isOverdue`), compute server-side and enforce again on mutate
-10. **Tests** — Vitest under `tests/` for new pure `lib` rules in the same PR
+10. **Tests** — Vitest under `tests/` for new pure `lib` rules in the same PR; keep smoke tests green
 11. **Tables** — add names to `lib/tables.ts`; no stringly table names scattered
 12. **Don’t duplicate** — reuse `lib/households`, status helpers, etc.
+13. **OpenAPI** — keep schemas/$refs accurate when `ENABLE_DOCS` is on
 
 Reference implementations: `repositories/{daily-logs,children,files,profile}.ts`, `services/daily-logs/`, `services/files/`.
 
-## API quality
+## API / ops quality (production)
 
 - Autosave may be partial; submit/required validation belongs in `lib` + server.
-- Errors: structured 400s when useful (`missingFieldIds`, `VALIDATION_FAILED`).
-- Prefer UK calendar dates via existing helpers (`Europe/London`).
-
-## Known follow-ups (resolved as of 2026-08)
-
-- ✅ Large children service split into `services/children/`
-- ✅ Offline conflict via `expectedUpdatedAt` + `log.updatedAt` (required once log exists)
-- ✅ Fastify schema failures map to `{ statusCode, code, message }`
-- ✅ Shared `lib/service-result.ts` (`serviceFailure` / `serviceSuccess`)
-- ✅ Swagger at `/docs`; CLAUDE shipped vs planned endpoints + Flutter write contract
+- Errors: stable `{ statusCode, code, message, …details }` — see CLAUDE error-code vocabulary.
+- Schema failures → friendly `VALIDATION_ERROR` via `formatValidationMessage`.
+- Prefer UK calendar dates via `lib/dates.ts` (`Europe/London`).
+- Redact `Authorization` in logs; return `x-request-id`; graceful `SIGTERM` shutdown.
+- `/docs` **off in production** unless `ENABLE_DOCS=true`.
+- CORS optional (`CORS_ORIGINS`); rate limit enabled (health excluded).
 
 ## Tests
 
 - Vitest under `tests/` for pure `lib` logic with the change that adds it.
 - Prefer testing rules over mocking entire Supabase trees early.
-- **Deferred:** auth/API smoke tests (401 on protected routes, `/health`) — add before wider go-live; see CLAUDE.md Deploy section.
+- Smoke: `tests/smoke/api.smoke.test.ts` (`/health`, 401 on protected routes).
 
 ## Deploy / env
 
 - Local: `.env` from `.env.example` (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PORT`).
-- Railway: same secrets in Variables; `railway.toml` handles build/start/healthcheck on `/health`.
+- Railway: same secrets in Variables; `railway.toml` builds with `npm run build` only (no second `npm ci`); healthcheck `/health`.
+- Optional: `ENABLE_DOCS`, `CORS_ORIGINS`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW`.
 
 ## Examples
 
@@ -82,9 +81,9 @@ await updateDailyLog(supabase, id, payload);
 ```
 
 ```typescript
-// ❌ BAD — no schema on write
-app.post("/files/signed-upload-url", handler);
+// ❌ BAD — hand-built reply for structured errors
+return reply.status(400).send({ code: "VALIDATION_FAILED", ... });
 
 // ✅ GOOD
-app.post("/files/signed-upload-url", { schema: { body: createFileUploadBodySchema } }, handler);
+throw validationFailed(ErrorMessages.DAILY_LOG_SUBMIT_INVALID, missingFieldIds);
 ```

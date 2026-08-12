@@ -8,9 +8,12 @@ import {
 } from "../services/daily-logs/index.js";
 import {
   badRequest,
+  conflict,
+  expectedUpdatedAtRequired,
   forbidden,
   internalError,
   notFound,
+  validationFailed,
 } from "../lib/errors.js";
 import { ErrorMessages } from "../constants/error-messages.js";
 import { saveDailyLogBodySchema } from "../schemas/daily-logs.js";
@@ -33,7 +36,6 @@ export async function dailyLogsRoute(app: FastifyInstance) {
           properties: {
             date: {
               type: "string",
-              pattern: "^\\d{4}-\\d{2}-\\d{2}$",
               description: "YYYY-MM-DD (UK calendar). Omit for today.",
             },
           },
@@ -123,7 +125,7 @@ export async function dailyLogsRoute(app: FastifyInstance) {
         },
       },
     },
-    async (request, reply) => {
+    async (request) => {
       const result = await saveDailyLogForCarer(
         request.supabase,
         request.user.id,
@@ -138,26 +140,19 @@ export async function dailyLogsRoute(app: FastifyInstance) {
         throw badRequest(ErrorMessages.DAILY_LOG_SUBMIT_EMPTY);
       }
       if (result.missingLock) {
-        return reply.status(400).send({
-          statusCode: 400,
-          code: "EXPECTED_UPDATED_AT_REQUIRED",
-          message: ErrorMessages.DAILY_LOG_EXPECTED_UPDATED_AT_REQUIRED,
-          currentUpdatedAt: result.currentUpdatedAt,
-        });
+        throw expectedUpdatedAtRequired(
+          ErrorMessages.DAILY_LOG_EXPECTED_UPDATED_AT_REQUIRED,
+          result.currentUpdatedAt,
+        );
       }
       if (result.validationFailed) {
-        return reply.status(400).send({
-          statusCode: 400,
-          code: "VALIDATION_FAILED",
-          message: ErrorMessages.DAILY_LOG_SUBMIT_INVALID,
-          missingFieldIds: result.missingFieldIds,
-        });
+        throw validationFailed(
+          ErrorMessages.DAILY_LOG_SUBMIT_INVALID,
+          result.missingFieldIds,
+        );
       }
       if (result.conflict) {
-        return reply.status(409).send({
-          statusCode: 409,
-          code: "CONFLICT",
-          message: ErrorMessages.DAILY_LOG_CONFLICT,
+        throw conflict(ErrorMessages.DAILY_LOG_CONFLICT, {
           currentUpdatedAt: result.currentUpdatedAt,
         });
       }
