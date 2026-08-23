@@ -23,6 +23,31 @@ export class AppError extends Error {
   }
 }
 
+export function toError(error: unknown): Error {
+  if (error instanceof Error) {
+    const extra = goCardlessDetails(error);
+    if (extra && extra !== error.message) {
+      return new Error(`${error.message}: ${extra}`);
+    }
+    return error;
+  }
+  return new Error(goCardlessDetails(error) || String(error));
+}
+
+function goCardlessDetails(error: unknown): string {
+  if (!error || typeof error !== "object") return "";
+  const body = error as {
+    message?: string;
+    errors?: Array<{ message?: string; field?: string; reason?: string }>;
+  };
+  const fromList = (body.errors ?? [])
+    .map((item) =>
+      [item.field, item.reason, item.message].filter(Boolean).join(": "),
+    )
+    .filter(Boolean);
+  return fromList.join(" | ");
+}
+
 export function unauthorized(message: string = ErrorMessages.UNAUTHORIZED) {
   return new AppError(401, "UNAUTHORIZED", message);
 }

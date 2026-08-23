@@ -5,6 +5,9 @@
 # Env vars (Railway Variables — never commit secrets):
 #   SUPABASE_URL
 #   SUPABASE_PUBLISHABLE_KEY
+#   SUPABASE_SERVICE_ROLE_KEY (billing writes / webhooks)
+#   GOCARDLESS_ACCESS_TOKEN / GOCARDLESS_WEBHOOK_SECRET / GOCARDLESS_ENV
+#   BILLING_CRON_SECRET — Railway Cron POST /internal/billing/collect
 #   PORT is injected by Railway
 
 [build]

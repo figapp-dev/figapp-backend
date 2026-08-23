@@ -95,11 +95,16 @@ export async function buildApp() {
   await app.register(sensible);
   await app.register(cors, {
     origin: env.corsOrigins,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type", "Accept"],
   });
   await app.register(rateLimit, {
     max: env.rateLimitMax,
     timeWindow: env.rateLimitWindow,
-    allowList: (request) => request.url.split("?")[0] === "/health",
+    allowList: (request) => {
+      const path = request.url.split("?")[0];
+      return path === "/health" || path === "/webhooks/gocardless" || path === "/internal/billing/collect";
+    },
   });
 
   // Swagger must register before routes so every route is documented (when enabled).

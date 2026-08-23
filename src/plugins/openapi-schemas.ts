@@ -548,4 +548,166 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       expiresIn: { type: "integer" },
     },
   });
+
+  app.addSchema({
+    $id: "BillingMoneyLineItemDto",
+    type: "object",
+    required: ["code", "label", "quantity", "unitAmountPence", "amountPence"],
+    properties: {
+      code: { type: "string" },
+      label: { type: "string" },
+      quantity: { type: "integer" },
+      unitAmountPence: { type: "integer" },
+      amountPence: { type: "integer" },
+    },
+  });
+
+  app.addSchema({
+    $id: "BillingAccessDto",
+    type: "object",
+    required: [
+      "agencyId",
+      "billingExempt",
+      "billingStatus",
+      "canUseApp",
+      "needsPaymentSetup",
+    ],
+    properties: {
+      agencyId: { type: "string", nullable: true },
+      billingExempt: { type: "boolean" },
+      billingStatus: {
+        type: "string",
+        enum: [
+          "pending_setup",
+          "active",
+          "past_due",
+          "suspended",
+          "billing_exempt",
+        ],
+      },
+      canUseApp: { type: "boolean" },
+      needsPaymentSetup: { type: "boolean" },
+    },
+  });
+
+  app.addSchema({
+    $id: "BillingSummaryDto",
+    type: "object",
+    required: [
+      "agencyId",
+      "agencyName",
+      "billingExempt",
+      "billingStatus",
+      "mandateExists",
+      "mandateStatus",
+      "setupFeeSelected",
+      "lineItems",
+      "monthlyTotalPence",
+      "setupFeePence",
+      "dueNowPence",
+      "billingCycleAnchor",
+      "currentPeriodStart",
+      "currentPeriodEnd",
+    ],
+    properties: {
+      agencyId: { type: "string" },
+      agencyName: { type: "string" },
+      billingExempt: { type: "boolean" },
+      billingStatus: {
+        type: "string",
+        enum: [
+          "pending_setup",
+          "active",
+          "past_due",
+          "suspended",
+          "billing_exempt",
+        ],
+      },
+      mandateExists: { type: "boolean" },
+      mandateStatus: nullableString,
+      setupFeeSelected: { type: "boolean" },
+      lineItems: {
+        type: "array",
+        items: { $ref: "BillingMoneyLineItemDto#" },
+      },
+      monthlyTotalPence: { type: "integer" },
+      setupFeePence: { type: "integer" },
+      dueNowPence: { type: "integer" },
+      billingCycleAnchor: nullableString,
+      currentPeriodStart: nullableString,
+      currentPeriodEnd: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "CreateBillingRequestDto",
+    type: "object",
+    required: ["billingRequestId", "authorisationUrl", "expiresAt"],
+    properties: {
+      billingRequestId: { type: "string" },
+      authorisationUrl: { type: "string" },
+      expiresAt: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "BillingExemptionDto",
+    type: "object",
+    required: [
+      "agencyId",
+      "billingExempt",
+      "billingStatus",
+      "setupFeeSelected",
+      "setupFeeAmountGbp",
+      "setupFeeDiscountPercent",
+    ],
+    properties: {
+      agencyId: { type: "string" },
+      billingExempt: { type: "boolean" },
+      billingStatus: {
+        type: "string",
+        enum: [
+          "pending_setup",
+          "active",
+          "past_due",
+          "suspended",
+          "billing_exempt",
+        ],
+      },
+      setupFeeSelected: { type: "boolean" },
+      setupFeeAmountGbp: { type: "number" },
+      setupFeeDiscountPercent: { type: "number" },
+    },
+  });
+
+  app.addSchema({
+    $id: "GoCardlessWebhookAckDto",
+    type: "object",
+    required: ["received"],
+    properties: {
+      received: { type: "boolean" },
+    },
+  });
+
+  app.addSchema({
+    $id: "BillingCollectDto",
+    type: "object",
+    required: ["agenciesConsidered", "paymentsCreated", "skipped", "errors"],
+    properties: {
+      agenciesConsidered: { type: "integer" },
+      paymentsCreated: { type: "integer" },
+      skipped: { type: "integer" },
+      errors: {
+        type: "array",
+        items: {
+          type: "object",
+          required: ["agencyId", "message"],
+          properties: {
+            agencyId: { type: "string" },
+            message: { type: "string" },
+          },
+        },
+      },
+    },
+  });
 }

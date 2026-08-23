@@ -43,4 +43,25 @@ export const ErrorMessages = {
   FILE_PATH_REQUIRED: "bucket and path are required",
   FILE_BUCKET_NOT_ALLOWED: "Storage bucket not allowed",
   FILE_ACCESS_DENIED: "You cannot upload or access files for this resource",
+
+  BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
+  BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
+  BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",
+  BILLING_AGENCY_NOT_FOUND: "Agency not found",
+  BILLING_FORBIDDEN: "Only the primary agency admin can manage billing",
+  BILLING_EXEMPT: "This agency is billing-exempt and does not use GoCardless",
+  BILLING_MANDATE_EXISTS: "Direct Debit is already set up for this agency",
+  BILLING_REDIRECT_URL_INVALID:
+    "successRedirectUrl must be an absolute https URL (http://localhost allowed in development)",
+  BILLING_GOCARDLESS_NOT_CONFIGURED: "GoCardless is not configured",
+  BILLING_WEBHOOK_INVALID_SIGNATURE: "Invalid GoCardless webhook signature",
+  BILLING_WEBHOOK_INVALID_BODY: "Invalid GoCardless webhook body",
+  BILLING_WEBHOOK_FAILED: "Failed to process GoCardless webhook",
+  BILLING_PRICES_MISSING: "Licence prices are not configured for the starter pack",
+  BILLING_EXEMPTION_FAILED: "Failed to update agency billing type",
+  BILLING_EXEMPTION_FORBIDDEN:
+    "Only a platform admin can change demo vs commercial billing",
+  BILLING_CRON_NOT_CONFIGURED: "Billing cron secret is not configured",
+  BILLING_CRON_UNAUTHORIZED: "Invalid billing cron secret",
+  BILLING_COLLECT_FAILED: "Failed to collect due licence payments",
 } as const;
