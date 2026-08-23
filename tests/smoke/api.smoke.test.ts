@@ -43,6 +43,37 @@ describe("API smoke", () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it("GET /billing/access without auth returns 401", async () => {
+    const res = await app.inject({ method: "GET", url: "/billing/access" });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("POST /internal/billing/collect without cron secret returns 401", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/internal/billing/collect",
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toMatchObject({
+      statusCode: 401,
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  it("POST /webhooks/gocardless without signature returns 401", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/webhooks/gocardless",
+      headers: { "content-type": "application/json" },
+      payload: { events: [] },
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toMatchObject({
+      statusCode: 401,
+      code: "UNAUTHORIZED",
+    });
+  });
+
   it("schema validation returns friendly VALIDATION_ERROR", async () => {
     const res = await app.inject({
       method: "PUT",

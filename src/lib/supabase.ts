@@ -1,5 +1,10 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { env } from "../config/env.js";
+
+const authNone = {
+  persistSession: false,
+  autoRefreshToken: false,
+} as const;
 
 export function createUserClient(accessToken: string) {
   return createClient(env.supabaseUrl, env.supabasePublishableKey, {
@@ -8,9 +13,20 @@ export function createUserClient(accessToken: string) {
         Authorization: `Bearer ${accessToken}`,
       },
     },
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
+    auth: authNone,
+  });
+}
+
+/**
+ * Service-role client. Use only after an explicit authz check (or webhook
+ * signature verification). Bypasses RLS for privileged billing writes.
+ */
+export function createServiceRoleClient(): SupabaseClient {
+  if (!env.supabaseServiceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
+  }
+
+  return createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
+    auth: authNone,
   });
 }

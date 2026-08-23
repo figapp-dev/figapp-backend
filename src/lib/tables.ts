@@ -17,4 +17,14 @@ export const TABLES = {
   DAILY_LOGS: "daily_logs",
   DAILY_LOG_TEMPLATES: "daily_log_templates",
   DAILY_LOG_CONTRIBUTORS: "daily_log_contributors",
+
+  GLOBAL_USER_ROLES: "global_user_roles",
+  LICENCE_TYPES: "licence_types",
+  TENANT_LICENCES: "tenant_licences",
+  INVOICES: "invoices",
+  BILLING_CUSTOMERS: "billing_customers",
+  BILLING_PAYMENT_METHODS: "billing_payment_methods",
+  BILLING_SUBSCRIPTIONS: "billing_subscriptions",
+  BILLING_EVENTS: "billing_events",
+  BILLING_SEAT_CHANGES: "billing_seat_changes",
 } as const;

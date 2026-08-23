@@ -44,6 +44,8 @@ export async function registerSwagger(app: FastifyInstance) {
         { name: "children", description: "Children & placed parents" },
         { name: "daily-logs", description: "Daily log assignments & answers" },
         { name: "files", description: "Signed upload / download URLs" },
+        { name: "billing", description: "Agency GoCardless billing (web)" },
+        { name: "webhooks", description: "Provider webhooks (signature only)" },
       ],
     },
   });
