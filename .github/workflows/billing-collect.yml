@@ -22,6 +22,7 @@ jobs:
             echo "Missing FIGAPP_API_URL or BILLING_CRON_SECRET repo secrets."
             exit 1
           fi
-          curl -fsS -X POST "${FIGAPP_API_URL%/}/internal/billing/collect" \
-            -H "x-billing-cron-secret: ${BILLING_CRON_SECRET}" \
-            -H "Content-Type: application/json"
+          # No Content-Type: application/json — Fastify 400s on an empty JSON body.
+          curl --fail-with-body -sS -X POST \
+            "${FIGAPP_API_URL%/}/internal/billing/collect" \
+            -H "x-billing-cron-secret: ${BILLING_CRON_SECRET}"
