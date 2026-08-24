@@ -76,4 +76,7 @@ export const env = {
    * Optional at boot; the collect route returns 500 until it is set.
    */
   billingCronSecret: process.env.BILLING_CRON_SECRET?.trim() || "",
+  /** Optional Resend key for dunning mail. Collect still suspends without it. */
+  resendApiKey: process.env.RESEND_API_KEY?.trim() || "",
+  billingFromEmail: process.env.BILLING_FROM_EMAIL?.trim() || "",
 } as const;

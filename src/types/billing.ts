@@ -187,4 +187,20 @@ export type BillingCaller = {
   isPlatformAdmin: boolean;
 };
 
+export type CreateSeatChargeBody = {
+  licenceCode: string;
+  quantity?: number;
+};
+
+export type SeatChargeDto = {
+  agencyId: string;
+  licenceCode: string;
+  quantity: number;
+  seatsPurchased: number;
+  amountPence: number;
+  periodStart: string;
+  periodEnd: string;
+  gocardlessPaymentId: string | null;
+};
+
 export type { BillableLicenceCode, MoneyLineItem };

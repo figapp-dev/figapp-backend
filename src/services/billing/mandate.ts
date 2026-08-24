@@ -2,9 +2,11 @@ import type { Mandate } from "gocardless-nodejs";
 import type { GoCardlessClient } from "gocardless-nodejs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  hasUsablePaymentMethod,
   isMandateTerminalAction,
   isMandateUsableAction,
   isUsableMandateStatus,
+  shouldRevertToPendingSetupAfterMandateLoss,
 } from "../../lib/billing-access.js";
 import {
   FIRST_SEAT_PERIOD_KEY,
@@ -17,6 +19,7 @@ import { GC_SCHEME } from "../../lib/gocardless.js";
 import {
   listActiveLicenceTypes,
   listInvoicesByAgency,
+  listPaymentMethods,
   updateAgencyBilling,
   upsertBillingCustomer,
   upsertPaymentMethod,
@@ -174,6 +177,29 @@ export async function handleMandateEvent(
       is_default: false,
     });
     if (error) throw error;
+
+    const methods = await listPaymentMethods(params.adminDb, params.agency.id);
+    if (methods.error) throw methods.error;
+
+    if (
+      !shouldRevertToPendingSetupAfterMandateLoss({
+        billingExempt: params.agency.billing_exempt,
+        billingStatus: params.agency.billing_status,
+        hasUsableMandate: hasUsablePaymentMethod(methods.data),
+      })
+    ) {
+      return;
+    }
+
+    const revert = await updateAgencyBilling(params.adminDb, params.agency.id, {
+      billing_status: "pending_setup",
+      past_due_since: null,
+      suspended_at: null,
+    });
+    if (revert.error) throw revert.error;
+    params.agency.billing_status = "pending_setup";
+    params.agency.past_due_since = null;
+    params.agency.suspended_at = null;
   }
 }
 

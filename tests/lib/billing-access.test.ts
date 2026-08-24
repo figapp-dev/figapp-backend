@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   billingAccessFromAgency,
+  hasUsablePaymentMethod,
   isMandateTerminalAction,
   isMandateUsableAction,
   isPaymentFailureAction,
   isPaymentSuccessAction,
   isUsableMandateStatus,
+  shouldRevertToPendingSetupAfterMandateLoss,
 } from "../../src/lib/billing-access.js";
 import { isAllowedRedirectUrl } from "../../src/lib/redirect-urls.js";
 
@@ -53,6 +55,73 @@ describe("billingAccessFromAgency", () => {
         billingStatus: "suspended",
       }),
     ).toEqual({ canUseApp: false, needsPaymentSetup: false });
+  });
+});
+
+describe("shouldRevertToPendingSetupAfterMandateLoss", () => {
+  it("locks commercial agencies with no remaining usable mandate", () => {
+    expect(
+      shouldRevertToPendingSetupAfterMandateLoss({
+        billingExempt: false,
+        billingStatus: "active",
+        hasUsableMandate: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRevertToPendingSetupAfterMandateLoss({
+        billingExempt: false,
+        billingStatus: "past_due",
+        hasUsableMandate: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRevertToPendingSetupAfterMandateLoss({
+        billingExempt: false,
+        billingStatus: "suspended",
+        hasUsableMandate: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not lock exempt agencies, replacement mandates, or pending_setup", () => {
+    expect(
+      shouldRevertToPendingSetupAfterMandateLoss({
+        billingExempt: true,
+        billingStatus: "active",
+        hasUsableMandate: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRevertToPendingSetupAfterMandateLoss({
+        billingExempt: false,
+        billingStatus: "billing_exempt",
+        hasUsableMandate: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRevertToPendingSetupAfterMandateLoss({
+        billingExempt: false,
+        billingStatus: "active",
+        hasUsableMandate: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRevertToPendingSetupAfterMandateLoss({
+        billingExempt: false,
+        billingStatus: "pending_setup",
+        hasUsableMandate: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("treats only live mandate statuses as usable", () => {
+    expect(hasUsablePaymentMethod([{ status: "cancelled" }])).toBe(false);
+    expect(
+      hasUsablePaymentMethod([
+        { status: "cancelled" },
+        { status: "pending_submission" },
+      ]),
+    ).toBe(true);
   });
 });
 

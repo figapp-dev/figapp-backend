@@ -3,6 +3,10 @@ import { parse as parseGoCardlessWebhook } from "gocardless-nodejs";
 import type { GoCardlessClient } from "gocardless-nodejs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gocardlessEventType } from "../../lib/billing-access.js";
+import {
+  agencyIdFromGcMetadata,
+  gocardlessEventResourceId,
+} from "../../lib/gocardless-webhook.js";
 import { env } from "../../config/env.js";
 import { GC_PROVIDER, getGoCardlessClient } from "../../lib/gocardless.js";
 import { toError } from "../../lib/errors.js";
@@ -34,23 +38,6 @@ function isInvalidSignature(error: unknown): boolean {
   return (error as { name?: string }).name === "InvalidSignatureError";
 }
 
-function metadataAgencyId(metadata: unknown): string | null {
-  if (!metadata || typeof metadata !== "object") return null;
-  const value = (metadata as Record<string, unknown>).agency_id;
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function eventResourceId(event: Event): string | null {
-  return (
-    event.links?.payment ??
-    event.links?.mandate ??
-    event.links?.subscription ??
-    event.links?.billing_request ??
-    event.links?.customer ??
-    null
-  );
-}
-
 /**
  * Resolve FigApp agency from GC metadata first, then our billing tables,
  * then linked GC resources. Webhooks often arrive before our rows exist.
@@ -62,7 +49,8 @@ async function resolveAgencyId(params: {
 }): Promise<string | null> {
   const { adminDb, gc, event } = params;
   const fromMeta =
-    metadataAgencyId(event.metadata) ?? metadataAgencyId(event.resource_metadata);
+    agencyIdFromGcMetadata(event.metadata) ??
+    agencyIdFromGcMetadata(event.resource_metadata);
   if (fromMeta) return fromMeta;
 
   const links = event.links;
@@ -80,7 +68,7 @@ async function resolveAgencyId(params: {
   }
   if (links?.billing_request) {
     const br = await gc.billingRequests.find(links.billing_request);
-    const fromBr = metadataAgencyId(br.metadata);
+    const fromBr = agencyIdFromGcMetadata(br.metadata);
     if (fromBr) return fromBr;
     if (br.links?.customer) {
       const customer = await findBillingCustomerByGcId(adminDb, br.links.customer);
@@ -89,7 +77,7 @@ async function resolveAgencyId(params: {
   }
   if (links?.payment) {
     const payment = await gc.payments.find(links.payment);
-    const fromPayment = metadataAgencyId(payment.metadata);
+    const fromPayment = agencyIdFromGcMetadata(payment.metadata);
     if (fromPayment) return fromPayment;
     if (payment.links?.mandate) {
       const method = await findPaymentMethodByMandateId(
@@ -108,7 +96,7 @@ async function resolveAgencyId(params: {
       );
       if (customer.data) return customer.data.agency_id;
       const gcCustomer = await gc.customers.find(mandate.links.customer);
-      return metadataAgencyId(gcCustomer.metadata);
+      return agencyIdFromGcMetadata(gcCustomer.metadata);
     }
   }
 
@@ -235,13 +223,13 @@ export async function processGoCardlessWebhook(
 
       const inserted = await insertBillingEvent(adminDb, {
         agency_id:
-          metadataAgencyId(event.metadata) ??
-          metadataAgencyId(event.resource_metadata),
+          agencyIdFromGcMetadata(event.metadata) ??
+          agencyIdFromGcMetadata(event.resource_metadata),
         provider: GC_PROVIDER,
         event_id: event.id,
         event_type: gocardlessEventType(event.resource_type, event.action),
         resource_type: event.resource_type ?? null,
-        resource_id: eventResourceId(event),
+        resource_id: gocardlessEventResourceId(event),
         payload: event,
       });
       if (inserted.error || !inserted.data) {

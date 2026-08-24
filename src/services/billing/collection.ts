@@ -18,12 +18,15 @@ import {
   updateAgencyBilling,
 } from "../../repositories/billing.js";
 import type { AgencyBillingRow } from "../../types/billing.js";
+import { runPastDueDunning } from "./dunning.js";
 import { ensureSeatPayment } from "./subscription.js";
 
 export type LicenceCollectResult = {
   agenciesConsidered: number;
   paymentsCreated: number;
   skipped: number;
+  noticesSent: number;
+  agenciesSuspended: number;
   errors: Array<{ agencyId: string; message: string }>;
 };
 
@@ -103,6 +106,8 @@ export async function collectDueLicencePayments(
     agenciesConsidered: agenciesRes.data.length,
     paymentsCreated: 0,
     skipped: 0,
+    noticesSent: 0,
+    agenciesSuspended: 0,
     errors: [],
   };
 
@@ -114,6 +119,18 @@ export async function collectDueLicencePayments(
     } catch (error) {
       result.errors.push({ agencyId: agency.id, message: toError(error).message });
     }
+  }
+
+  try {
+    const dunning = await runPastDueDunning(adminDb, today);
+    result.noticesSent = dunning.noticesSent;
+    result.agenciesSuspended = dunning.agenciesSuspended;
+    result.errors.push(...dunning.errors);
+  } catch (error) {
+    result.errors.push({
+      agencyId: "dunning",
+      message: toError(error).message,
+    });
   }
 
   return result;

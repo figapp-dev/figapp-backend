@@ -692,11 +692,20 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
   app.addSchema({
     $id: "BillingCollectDto",
     type: "object",
-    required: ["agenciesConsidered", "paymentsCreated", "skipped", "errors"],
+    required: [
+      "agenciesConsidered",
+      "paymentsCreated",
+      "skipped",
+      "noticesSent",
+      "agenciesSuspended",
+      "errors",
+    ],
     properties: {
       agenciesConsidered: { type: "integer" },
       paymentsCreated: { type: "integer" },
       skipped: { type: "integer" },
+      noticesSent: { type: "integer" },
+      agenciesSuspended: { type: "integer" },
       errors: {
         type: "array",
         items: {
@@ -708,6 +717,31 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
           },
         },
       },
+    },
+  });
+
+  app.addSchema({
+    $id: "SeatChargeDto",
+    type: "object",
+    required: [
+      "agencyId",
+      "licenceCode",
+      "quantity",
+      "seatsPurchased",
+      "amountPence",
+      "periodStart",
+      "periodEnd",
+      "gocardlessPaymentId",
+    ],
+    properties: {
+      agencyId: { type: "string" },
+      licenceCode: { type: "string" },
+      quantity: { type: "integer" },
+      seatsPurchased: { type: "integer" },
+      amountPence: { type: "integer" },
+      periodStart: { type: "string" },
+      periodEnd: { type: "string" },
+      gocardlessPaymentId: nullableString,
     },
   });
 }

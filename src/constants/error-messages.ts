@@ -64,4 +64,9 @@ export const ErrorMessages = {
   BILLING_CRON_NOT_CONFIGURED: "Billing cron secret is not configured",
   BILLING_CRON_UNAUTHORIZED: "Invalid billing cron secret",
   BILLING_COLLECT_FAILED: "Failed to collect due licence payments",
+  BILLING_SEAT_CHARGE_FAILED: "Failed to charge extra licence seats",
+  BILLING_SEAT_NO_PERIOD:
+    "Cannot add seats until the first Direct Debit has confirmed and a billing period exists",
+  BILLING_SEAT_NO_MANDATE: "Set up Direct Debit before buying extra seats",
+  BILLING_SEAT_EXEMPT: "Exempt agencies do not buy extra seats via GoCardless",
 } as const;
