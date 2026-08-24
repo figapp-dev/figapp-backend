@@ -90,6 +90,23 @@ export async function listAgenciesForLicenceCollection(
   };
 }
 
+/** Commercial agencies in past_due (dunning). Service role. */
+export async function listPastDueAgenciesForDunning(
+  supabase: SupabaseClient,
+): Promise<{ data: AgencyBillingRow[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.AGENCIES)
+    .select(AGENCY_BILLING_SELECT)
+    .eq("billing_exempt", false)
+    .eq("billing_status", "past_due")
+    .limit(500);
+
+  return {
+    data: (data as AgencyBillingRow[] | null) ?? [],
+    error,
+  };
+}
+
 export async function findAgencyBillingById(
   supabase: SupabaseClient,
   agencyId: string,
@@ -133,6 +150,58 @@ export async function listTenantLicences(
     data: (data as TenantLicenceRow[] | null) ?? [],
     error,
   };
+}
+
+export async function findTenantLicence(
+  supabase: SupabaseClient,
+  agencyId: string,
+  licenceCode: string,
+): Promise<{ data: TenantLicenceRow | null; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.TENANT_LICENCES)
+    .select("agency_id, licence_code, seats_purchased, seats_used")
+    .eq("agency_id", agencyId)
+    .eq("licence_code", licenceCode)
+    .maybeSingle();
+
+  return {
+    data: (data as TenantLicenceRow | null) ?? null,
+    error,
+  };
+}
+
+export async function setTenantLicencePurchasedSeats(
+  supabase: SupabaseClient,
+  params: {
+    agencyId: string;
+    licenceCode: string;
+    seatsPurchased: number;
+  },
+): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from(TABLES.TENANT_LICENCES)
+    .update({ seats_purchased: params.seatsPurchased })
+    .eq("agency_id", params.agencyId)
+    .eq("licence_code", params.licenceCode);
+
+  return { error };
+}
+
+export async function insertSeatChange(
+  supabase: SupabaseClient,
+  row: {
+    agency_id: string;
+    licence_code: string;
+    quantity: number;
+    amount_pence: number;
+    period_start: string;
+    period_end: string;
+    gocardless_payment_id: string | null;
+    change_type: string;
+  },
+): Promise<{ error: Error | null }> {
+  const { error } = await supabase.from(TABLES.BILLING_SEAT_CHANGES).insert(row);
+  return { error };
 }
 
 export async function findBillingCustomerByAgencyId(

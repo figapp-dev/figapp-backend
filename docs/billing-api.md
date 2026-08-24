@@ -17,8 +17,9 @@ Money is always **integer pence** (GBP). £1.00 = `100`. Display as `amountPence
 | `GET` | `/billing/access` | Any signed-in user | App gate: may they use FigApp? |
 | `GET` | `/billing/agencies/:agencyId/summary` | Primary agency admin or superadmin | Payment-screen quote |
 | `POST` | `/billing/agencies/:agencyId/billing-request` | Same | Start GoCardless hosted Direct Debit |
+| `POST` | `/billing/agencies/:agencyId/seat-charges` | Same | Mid-cycle extra seats (pro-rata one-off) |
 | `POST` | `/webhooks/gocardless` | GoCardless only (signature) | Sync mandate / payment |
-| `POST` | `/internal/billing/collect` | Railway cron (`x-billing-cron-secret`) | Catch-up one-off licence payments |
+| `POST` | `/internal/billing/collect` | Cron (`x-billing-cron-secret`) | Missing licence one-offs + 28-day dunning |
 
 `:agencyId` is a **path param** (`agencies.id` UUID). Get it from `GET /profile` → `agency.id`.  
 `GET /billing/access` does **not** take `agencyId`; it uses the JWT user’s agency.
@@ -163,10 +164,18 @@ GoCardless must reach a public URL (ngrok locally). Do not fake this from Postma
 | After event | What we persist |
 | --- | --- |
 | Usable mandate | `billing_payment_methods`; `billing_status` `pending_setup` → `active`; **one-off** licence payment; optional setup-fee payment |
+| Mandate cancelled / failed / expired / blocked / consumed | Payment method marked unusable; commercial agencies with **no other usable mandate** → `pending_setup` (`canUseApp: false`) |
 | Payment `confirmed` / `paid_out` | Invoice paid; first success sets `billing_cycle_anchor` |
-| Payment failed | `billing_status` → `past_due` |
+| Payment failed | `billing_status` → `past_due` (mandate still live; not the same as mandate cancelled) |
 
-FigApp owns the monthly calendar. There is **no** GoCardless subscription. A Railway cron calls `POST /internal/billing/collect` (header `x-billing-cron-secret`) to create missing one-offs if the API was down on charge day.
+FigApp owns the monthly calendar. There is **no** GoCardless subscription.
+
+`POST /internal/billing/collect` (header `x-billing-cron-secret`):
+
+1. Creates missing licence one-offs.
+2. For `past_due`: weekly reminder emails (days 7/14/21) if `RESEND_API_KEY` + `BILLING_FROM_EMAIL` are set; **always** sets `suspended` + `suspended_at` on day 29.
+
+`POST /billing/agencies/:agencyId/seat-charges` body `{ "licenceCode": "foster_carer", "quantity": 1 }`. Requires a usable mandate and `current_period_*` dates. Charges remaining days this cycle, then increments `tenant_licences.seats_purchased`.
 
 ---
 

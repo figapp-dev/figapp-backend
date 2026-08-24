@@ -437,6 +437,44 @@ export function quotePurchasedSeats(params: {
   return { lineItems, monthlyTotalPence };
 }
 
+/**
+ * Mid-cycle add: pro-rata pence for `quantity` extra seats in the current period.
+ * Foster seats use first vs additional monthly rates for each new seat in order.
+ */
+export function quoteMidCycleSeatAddition(params: {
+  licenceCode: BillableLicenceCode;
+  quantity: number;
+  currentPurchased: number;
+  price: LicencePrice;
+  periodStart: Date;
+  periodEnd: Date;
+  asOf?: Date;
+}): { amountPence: number } {
+  assertNonNegative(params.quantity, "quantity");
+  assertNonNegative(params.currentPurchased, "currentPurchased");
+  if (params.quantity === 0) return { amountPence: 0 };
+
+  let amountPence = 0;
+  for (let i = 0; i < params.quantity; i += 1) {
+    const monthlyPriceGbp =
+      params.licenceCode === "foster_carer"
+        ? nextFosterSeatMonthlyGbp({
+            currentPurchased: params.currentPurchased + i,
+            priceMonthlyGbp: params.price.priceMonthly,
+            priceAdditionalGbp: params.price.priceAdditional,
+          })
+        : params.price.priceMonthly;
+    amountPence += calculateProRataPence({
+      monthlyPriceGbp,
+      periodStart: params.periodStart,
+      periodEnd: params.periodEnd,
+      asOf: params.asOf,
+      quantity: 1,
+    });
+  }
+  return { amountPence };
+}
+
 /** Seed map for tenant_licences rows at agency create. */
 export function starterPackTenantLicenceSeed(): Array<{
   licence_code: BillableLicenceCode;

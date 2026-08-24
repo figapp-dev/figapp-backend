@@ -35,4 +35,21 @@ export const billingExemptionBodySchema = {
   },
 } as const;
 
-export type { BillingExemptionBody, CreateBillingRequestBody };
+export const seatChargeBodySchema = {
+  type: "object",
+  required: ["licenceCode"],
+  additionalProperties: false,
+  properties: {
+    licenceCode: {
+      type: "string",
+      minLength: 1,
+      description: "licence_types.code e.g. foster_carer",
+    },
+    quantity: {
+      type: "integer",
+      minimum: 1,
+      maximum: 50,
+      default: 1,
+    },
+  },
+} as const;

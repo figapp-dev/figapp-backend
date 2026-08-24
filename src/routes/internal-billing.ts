@@ -37,7 +37,8 @@ export async function billingCollectRoute(app: FastifyInstance) {
         tags: ["billing"],
         summary: "Catch-up one-off licence collections (cron)",
         description:
-          "Creates missing GoCardless one-off payments for commercial agencies. " +
+          "Creates missing GoCardless one-off payments for commercial agencies, " +
+          "sends past_due reminder emails, and suspends on day 29. " +
           "Header x-billing-cron-secret (or Bearer) must match BILLING_CRON_SECRET.",
         response: {
           200: { $ref: "BillingCollectDto#" },

@@ -12,6 +12,7 @@ import {
   minPurchasedSeatsAllowed,
   nextFosterSeatMonthlyGbp,
   periodEndFromAnchor,
+  quoteMidCycleSeatAddition,
   quotePurchasedSeats,
   quoteStarterPack,
   starterPackTenantLicenceSeed,
@@ -136,5 +137,21 @@ describe("billingCalculator", () => {
   it("computes inclusive period end from the cycle anchor", () => {
     expect(periodEndFromAnchor("2026-08-13")).toBe("2026-09-12");
     expect(periodEndFromAnchor("2026-01-31")).toBe("2026-02-27");
+  });
+
+  it("quotes mid-cycle extra foster seats at the additional rate", () => {
+    const start = new Date(Date.UTC(2026, 7, 1));
+    const end = new Date(Date.UTC(2026, 7, 30));
+    const mid = new Date(Date.UTC(2026, 7, 16));
+    const quote = quoteMidCycleSeatAddition({
+      licenceCode: "foster_carer",
+      quantity: 2,
+      currentPurchased: 10,
+      price: { code: "foster_carer", priceMonthly: 20, priceAdditional: 5 },
+      periodStart: start,
+      periodEnd: end,
+      asOf: mid,
+    });
+    expect(quote.amountPence).toBe(500);
   });
 });
