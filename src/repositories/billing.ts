@@ -187,20 +187,159 @@ export async function setTenantLicencePurchasedSeats(
   return { error };
 }
 
+export async function upsertTenantLicence(
+  supabase: SupabaseClient,
+  row: {
+    agency_id: string;
+    licence_code: string;
+    seats_purchased: number;
+    seats_used: number;
+  },
+): Promise<{ error: Error | null }> {
+  const { error } = await supabase.from(TABLES.TENANT_LICENCES).upsert(row, {
+    onConflict: "agency_id,licence_code",
+  });
+  return { error };
+}
+
+export async function listAgencyUsersForSeats(
+  supabase: SupabaseClient,
+  agencyId: string,
+): Promise<{
+  data: Array<{ role: string; is_active: boolean | null; is_archived: boolean | null }>;
+  error: Error | null;
+}> {
+  const { data, error } = await supabase
+    .from(TABLES.AGENCY_USERS)
+    .select("role, is_active, is_archived")
+    .eq("agency_id", agencyId);
+
+  return {
+    data:
+      (data as Array<{
+        role: string;
+        is_active: boolean | null;
+        is_archived: boolean | null;
+      }> | null) ?? [],
+    error,
+  };
+}
+
+export async function listPendingInviteRoles(
+  supabase: SupabaseClient,
+  agencyId: string,
+): Promise<{ data: string[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.INVITATION_TOKENS)
+    .select("role")
+    .eq("agency_id", agencyId)
+    .is("used_at", null)
+    .gt("expires_at", new Date().toISOString());
+
+  return {
+    data: ((data as Array<{ role: string | null }> | null) ?? [])
+      .map((row) => row.role)
+      .filter((role): role is string => !!role),
+    error,
+  };
+}
+
+export type SeatChangeType = "add" | "reduce_scheduled" | "reduce_applied";
+export type SeatChangeStatus =
+  | "pending_payment"
+  | "completed"
+  | "scheduled"
+  | "cancelled"
+  | "failed";
+
+export type SeatChangeRow = {
+  id: string;
+  agency_id: string;
+  licence_code: string;
+  change_type: SeatChangeType;
+  quantity: number;
+  status: SeatChangeStatus;
+  pro_rata_amount_pence: number | null;
+  gocardless_payment_id: string | null;
+  effective_at: string | null;
+};
+
 export async function insertSeatChange(
   supabase: SupabaseClient,
   row: {
     agency_id: string;
     licence_code: string;
+    change_type: SeatChangeType;
     quantity: number;
-    amount_pence: number;
-    period_start: string;
-    period_end: string;
-    gocardless_payment_id: string | null;
-    change_type: string;
+    status: SeatChangeStatus;
+    pro_rata_amount_pence?: number | null;
+    gocardless_payment_id?: string | null;
+    effective_at?: string | null;
+    notes?: string | null;
+    created_by?: string | null;
   },
+): Promise<{ data: SeatChangeRow | null; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.BILLING_SEAT_CHANGES)
+    .insert(row)
+    .select(
+      "id, agency_id, licence_code, change_type, quantity, status, pro_rata_amount_pence, gocardless_payment_id, effective_at",
+    )
+    .maybeSingle();
+
+  return {
+    data: (data as SeatChangeRow | null) ?? null,
+    error,
+  };
+}
+
+export async function listScheduledSeatReductions(
+  supabase: SupabaseClient,
+  agencyId: string,
+): Promise<{ data: SeatChangeRow[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.BILLING_SEAT_CHANGES)
+    .select(
+      "id, agency_id, licence_code, change_type, quantity, status, pro_rata_amount_pence, gocardless_payment_id, effective_at",
+    )
+    .eq("agency_id", agencyId)
+    .eq("change_type", "reduce_scheduled")
+    .eq("status", "scheduled");
+
+  return {
+    data: (data as SeatChangeRow[] | null) ?? [],
+    error,
+  };
+}
+
+export async function listDueScheduledSeatReductions(
+  supabase: SupabaseClient,
+  today: string,
+): Promise<{ data: SeatChangeRow[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.BILLING_SEAT_CHANGES)
+    .select(
+      "id, agency_id, licence_code, change_type, quantity, status, pro_rata_amount_pence, gocardless_payment_id, effective_at",
+    )
+    .eq("change_type", "reduce_scheduled")
+    .eq("status", "scheduled")
+    .lte("effective_at", today);
+
+  return {
+    data: (data as SeatChangeRow[] | null) ?? [],
+    error,
+  };
+}
+
+export async function markSeatChangeApplied(
+  supabase: SupabaseClient,
+  id: string,
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from(TABLES.BILLING_SEAT_CHANGES).insert(row);
+  const { error } = await supabase
+    .from(TABLES.BILLING_SEAT_CHANGES)
+    .update({ change_type: "reduce_applied", status: "completed" })
+    .eq("id", id);
+
   return { error };
 }
 

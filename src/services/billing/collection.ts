@@ -19,6 +19,7 @@ import {
 } from "../../repositories/billing.js";
 import type { AgencyBillingRow } from "../../types/billing.js";
 import { runPastDueDunning } from "./dunning.js";
+import { applyDueSeatReductions } from "./seat-reductions.js";
 import { ensureSeatPayment } from "./subscription.js";
 
 export type LicenceCollectResult = {
@@ -27,6 +28,7 @@ export type LicenceCollectResult = {
   skipped: number;
   noticesSent: number;
   agenciesSuspended: number;
+  reductionsApplied: number;
   errors: Array<{ agencyId: string; message: string }>;
 };
 
@@ -108,8 +110,20 @@ export async function collectDueLicencePayments(
     skipped: 0,
     noticesSent: 0,
     agenciesSuspended: 0,
+    reductionsApplied: 0,
     errors: [],
   };
+
+  try {
+    const reductions = await applyDueSeatReductions(adminDb, today);
+    result.reductionsApplied = reductions.applied;
+    result.errors.push(...reductions.errors);
+  } catch (error) {
+    result.errors.push({
+      agencyId: "seat-reductions",
+      message: toError(error).message,
+    });
+  }
 
   for (const agency of agenciesRes.data) {
     try {

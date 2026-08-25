@@ -37,6 +37,7 @@ import type {
 } from "../../types/billing.js";
 import { loadManagedAgency } from "./authz.js";
 import { upsertInvoiceForPayment } from "./subscription.js";
+import { ensureTenantLicences } from "./tenant-licences.js";
 
 export type SeatChargeResult = SeatChargeDto;
 
@@ -99,6 +100,8 @@ export async function chargeMidCycleSeats(params: {
       code: "CONFLICT",
     });
   }
+
+  await ensureTenantLicences(adminDb, agency.id);
 
   const [licenceRes, pricesRes] = await Promise.all([
     findTenantLicence(adminDb, agency.id, params.licenceCode),
@@ -193,11 +196,11 @@ export async function chargeMidCycleSeats(params: {
     agency_id: agency.id,
     licence_code: params.licenceCode,
     quantity: params.quantity,
-    amount_pence: amountPence,
-    period_start: periodStart,
-    period_end: periodEnd,
+    change_type: "add",
+    status: amountPence > 0 ? "pending_payment" : "completed",
+    pro_rata_amount_pence: amountPence,
     gocardless_payment_id: paymentId,
-    change_type: "prorata_add",
+    effective_at: periodStart,
   });
   if (change.error) throw change.error;
 

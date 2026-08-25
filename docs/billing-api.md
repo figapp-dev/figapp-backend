@@ -18,6 +18,7 @@ Money is always **integer pence** (GBP). £1.00 = `100`. Display as `amountPence
 | `GET` | `/billing/agencies/:agencyId/summary` | Primary agency admin or superadmin | Payment-screen quote |
 | `POST` | `/billing/agencies/:agencyId/billing-request` | Same | Start GoCardless hosted Direct Debit |
 | `POST` | `/billing/agencies/:agencyId/seat-charges` | Same | Mid-cycle extra seats (pro-rata one-off) |
+| `POST` | `/billing/agencies/:agencyId/seat-reductions` | Same | Schedule unused seats to drop on next bill |
 | `POST` | `/webhooks/gocardless` | GoCardless only (signature) | Sync mandate / payment |
 | `POST` | `/internal/billing/collect` | Cron (`x-billing-cron-secret`) | Missing licence one-offs + 28-day dunning |
 
@@ -172,10 +173,13 @@ FigApp owns the monthly calendar. There is **no** GoCardless subscription.
 
 `POST /internal/billing/collect` (header `x-billing-cron-secret`):
 
-1. Creates missing licence one-offs.
-2. For `past_due`: weekly reminder emails (days 7/14/21) if `RESEND_API_KEY` + `BILLING_FROM_EMAIL` are set; **always** sets `suspended` + `suspended_at` on day 29.
+1. Applies due scheduled seat reductions.
+2. Creates missing licence one-offs.
+3. For `past_due`: weekly reminder emails (days 7/14/21) if `RESEND_API_KEY` + `BILLING_FROM_EMAIL` are set; **always** sets `suspended` + `suspended_at` on day 29.
 
-`POST /billing/agencies/:agencyId/seat-charges` body `{ "licenceCode": "foster_carer", "quantity": 1 }`. Requires a usable mandate and `current_period_*` dates. Charges remaining days this cycle, then increments `tenant_licences.seats_purchased`.
+`POST /billing/agencies/:agencyId/seat-charges` body `{ "licenceCode": "foster_carer", "quantity": 1 }`. Requires a usable mandate and `current_period_*` dates. Charges remaining days this cycle, then increments `tenant_licences.seats_purchased`. Missing starter-pack rows are created first (`ensure`).
+
+`POST /billing/agencies/:agencyId/seat-reductions` body `{ "licenceCode": "foster_carer", "quantity": 1 }`. Schedules a drop at `current_period_end`. No mid-cycle refund. Cannot go below starter pack or assigned seats. Applied by the collect cron.
 
 ---
 

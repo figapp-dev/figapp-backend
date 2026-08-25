@@ -7,6 +7,7 @@ import {
   calculateSetupFeePence,
   canReducePurchasedSeats,
   daysInBillingCycle,
+  ensurePurchasedSeats,
   fosterPurchasedSeatsMonthlyPence,
   gbpToPence,
   minPurchasedSeatsAllowed,
@@ -22,6 +23,13 @@ describe("billingCalculator", () => {
   it("computes available seats", () => {
     expect(availableSeats({ purchased: 10, used: 3, pendingInvites: 2 })).toBe(5);
     expect(availableSeats({ purchased: 1, used: 1, pendingInvites: 0 })).toBe(0);
+  });
+
+  it("materializes starter-pack capacity without lowering stored seats", () => {
+    expect(ensurePurchasedSeats("foster_carer", 0, null)).toBe(10);
+    expect(ensurePurchasedSeats("agency_admin", 4, null)).toBe(4);
+    expect(ensurePurchasedSeats("foster_carer", 4, 12)).toBe(12);
+    expect(ensurePurchasedSeats("foster_carer", 4, 0)).toBe(10);
   });
 
   it("enforces starter-pack floor for reductions", () => {

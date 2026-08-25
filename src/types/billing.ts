@@ -203,4 +203,18 @@ export type SeatChargeDto = {
   gocardlessPaymentId: string | null;
 };
 
+export type CreateSeatReductionBody = {
+  licenceCode: string;
+  quantity?: number;
+};
+
+export type SeatReductionDto = {
+  agencyId: string;
+  licenceCode: string;
+  quantity: number;
+  seatsPurchased: number;
+  seatsAfterReduction: number;
+  effectiveAt: string;
+};
+
 export type { BillableLicenceCode, MoneyLineItem };
