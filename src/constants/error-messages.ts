@@ -24,6 +24,7 @@ export const ErrorMessages = {
   DAILY_LOG_SAVE_FAILED: "Failed to save daily log",
   DAILY_LOG_INVALID_BODY: "dataJson must be an object",
   DAILY_LOG_INVALID_DATE: "date must be YYYY-MM-DD",
+  DAILY_LOG_INVALID_STATUS: "status must be overdue",
   DAILY_LOG_NOT_EDITABLE: "This daily log can no longer be edited",
   DAILY_LOG_SUBMIT_EMPTY: "Cannot submit an empty daily log",
   DAILY_LOG_SUBMIT_INVALID: "Cannot submit: required fields are missing",

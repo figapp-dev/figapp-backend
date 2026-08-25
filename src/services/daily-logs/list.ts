@@ -1,20 +1,35 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getActiveHouseholdIds } from "../../lib/households.js";
-import { getTodayUKDateString, toDateOnly } from "../../lib/dates.js";
 import { toDailyLogListItemDto } from "../../mappers/daily-logs.js";
-import { listAssignmentsByDate } from "../../repositories/daily-logs.js";
-import type { DailyLogsListDto } from "../../types/daily-logs.js";
+import {
+  listAssignmentsByDate,
+  listIncompleteAssignmentsInRange,
+} from "../../repositories/daily-logs.js";
+import type {
+  DailyLogAssignmentListRow,
+  DailyLogsListDto,
+} from "../../types/daily-logs.js";
 import { loadSubjectNames, resolveSubjectName } from "./subjects.js";
+import {
+  OVERDUE_LIST_LIMIT,
+  resolveDailyLogsListQuery,
+  type DailyLogsListOptions,
+} from "./list-query.js";
 
 export async function listDailyLogsForCarer(
   supabase: SupabaseClient,
   userId: string,
-  options?: { date?: string },
+  options?: DailyLogsListOptions,
 ): Promise<{
   data: DailyLogsListDto | null;
   error: Error | null;
   badRequest?: boolean;
 }> {
+  const query = resolveDailyLogsListQuery(options);
+  if (!query.ok) {
+    return { data: null, error: null, badRequest: true };
+  }
+
   const { householdIds, error: householdError } = await getActiveHouseholdIds(
     supabase,
     userId,
@@ -26,28 +41,38 @@ export async function listDailyLogsForCarer(
     return { data: { items: [] }, error: null };
   }
 
-  let assignedDate: string;
-  if (options?.date != null && String(options.date).trim() !== "") {
-    const parsed = toDateOnly(options.date);
-    if (!parsed) {
-      return { data: null, error: null, badRequest: true };
-    }
-    assignedDate = parsed;
-  } else {
-    assignedDate = getTodayUKDateString();
+  const listed =
+    query.kind === "overdue"
+      ? await listIncompleteAssignmentsInRange(supabase, householdIds, {
+          afterDate: query.afterDate,
+          beforeDate: query.beforeDate,
+          limit: OVERDUE_LIST_LIMIT,
+        })
+      : await listAssignmentsByDate(supabase, householdIds, query.assignedDate);
+
+  if (listed.error) {
+    return { data: null, error: listed.error };
   }
 
-  const { data: rows, error: assignmentError } = await listAssignmentsByDate(
-    supabase,
-    householdIds,
-    assignedDate,
-  );
-
-  if (assignmentError) {
-    return { data: null, error: assignmentError };
+  const mapped = await mapAssignmentRows(supabase, listed.data);
+  if (mapped.error) {
+    return { data: null, error: mapped.error };
   }
+
+  const items =
+    query.kind === "overdue"
+      ? mapped.items.filter((item) => item.isOverdue)
+      : mapped.items;
+
+  return { data: { items }, error: null };
+}
+
+async function mapAssignmentRows(
+  supabase: SupabaseClient,
+  rows: DailyLogAssignmentListRow[],
+): Promise<{ items: DailyLogsListDto["items"]; error: Error | null }> {
   if (rows.length === 0) {
-    return { data: { items: [] }, error: null };
+    return { items: [], error: null };
   }
 
   const { childNames, parentNames, error: namesError } = await loadSubjectNames(
@@ -55,15 +80,16 @@ export async function listDailyLogsForCarer(
     rows,
   );
   if (namesError) {
-    return { data: null, error: namesError };
+    return { items: [], error: namesError };
   }
 
-  const items = rows.map((row) =>
-    toDailyLogListItemDto(
-      row,
-      resolveSubjectName(row, childNames, parentNames),
+  return {
+    items: rows.map((row) =>
+      toDailyLogListItemDto(
+        row,
+        resolveSubjectName(row, childNames, parentNames),
+      ),
     ),
-  );
-
-  return { data: { items }, error: null };
+    error: null,
+  };
 }

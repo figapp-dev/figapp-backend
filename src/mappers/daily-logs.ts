@@ -40,15 +40,15 @@ export function toDailyLogListItemDto(
 
   return {
     id: row.id,
-    assignedDate: row.assigned_date,
+    assignedDate: toDateOnly(row.assigned_date) ?? String(row.assigned_date ?? ""),
     assignmentStatus: row.status,
     status: log?.status ?? row.status ?? "pending",
     assignmentSubject: row.assignment_subject ?? "child",
     childId: row.child_id,
     biologicalParentId: row.biological_parent_id,
     householdId: row.household_id,
-    dueTime: row.due_time,
-    completedAt: row.completed_at,
+    dueTime: row.due_time == null ? null : String(row.due_time),
+    completedAt: row.completed_at == null ? null : String(row.completed_at),
     subjectName,
     canEdit: isDailyLogEditable(editOptions),
     isOverdue: isDailyLogOverdue(editOptions),

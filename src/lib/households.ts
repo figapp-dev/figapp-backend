@@ -1,24 +1,42 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TABLES } from "./tables.js";
+import { isActiveHouseholdLinkForToday } from "./placement-status.js";
 
-/** Active household ids for a carer (household_carers.is_active = true). */
+/** Active household ids for the signed-in user (carer links + profile household). */
 export async function getActiveHouseholdIds(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{ householdIds: string[]; error: Error | null }> {
-  const { data, error } = await supabase
-    .from(TABLES.HOUSEHOLD_CARERS)
-    .select("household_id")
-    .eq("user_id", userId)
-    .eq("is_active", true);
+  const [links, profile] = await Promise.all([
+    supabase
+      .from(TABLES.HOUSEHOLD_CARERS)
+      .select("household_id, is_active, start_date, end_date")
+      .eq("user_id", userId),
+    supabase
+      .from(TABLES.AGENCY_USERS)
+      .select("household_id")
+      .eq("user_id", userId)
+      .eq("is_archived", false)
+      .maybeSingle(),
+  ]);
 
-  if (error) {
-    return { householdIds: [], error };
+  if (links.error) {
+    return { householdIds: [], error: links.error };
+  }
+  if (profile.error) {
+    return { householdIds: [], error: profile.error };
   }
 
-  const householdIds = (data ?? [])
-    .map((row) => row.household_id as string)
-    .filter(Boolean);
+  const householdIds = new Set<string>();
+  for (const row of links.data ?? []) {
+    if (isActiveHouseholdLinkForToday(row)) {
+      const id = row.household_id as string | null;
+      if (id) householdIds.add(id);
+    }
+  }
 
-  return { householdIds, error: null };
+  const profileHouseholdId = profile.data?.household_id as string | null;
+  if (profileHouseholdId) householdIds.add(profileHouseholdId);
+
+  return { householdIds: [...householdIds], error: null };
 }

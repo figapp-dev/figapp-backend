@@ -149,6 +149,7 @@ Auth: Supabase Auth on the client; send `Authorization: Bearer <access_token>`. 
 - `GET /profile` — `id` = auth user id; `agencyUserId` = `agency_users.id`
 - `GET /children`, `GET /children/:id`, `GET /children/:id/placements`
 - `GET /daily-logs?date=YYYY-MM-DD` — UK date; omit date → today
+- `GET /daily-logs/overdue` — incomplete assignments before today (last 90 days, newest first)
 - `GET /daily-logs/:id` — assignment detail (template + `dataJson` + contributors)
 - `PUT /daily-logs/:id` — save/submit (see Flutter contract below)
 - `POST /files/signed-upload-url`, `POST /files/signed-url`
