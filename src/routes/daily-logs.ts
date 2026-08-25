@@ -19,17 +19,60 @@ import { ErrorMessages } from "../constants/error-messages.js";
 import { saveDailyLogBodySchema } from "../schemas/daily-logs.js";
 import type { SaveDailyLogBody } from "../types/daily-logs.js";
 
+const dailyLogsListResponseSchema = {
+  type: "object",
+  required: ["items"],
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: true,
+      },
+    },
+  },
+} as const;
+
 export async function dailyLogsRoute(app: FastifyInstance) {
   app.addHook("preHandler", requireAuth);
 
+  app.get(
+    "/daily-logs/overdue",
+    {
+      schema: {
+        tags: ["daily-logs"],
+        summary:
+          "Incomplete assignments before today (last 90 days, newest first)",
+        security: [...bearerSecurity],
+        response: {
+          200: dailyLogsListResponseSchema,
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const { data, error } = await listDailyLogsForCarer(
+        request.supabase,
+        request.user.id,
+        { status: "overdue" },
+      );
+      if (error) {
+        request.log.error(error);
+        throw internalError(ErrorMessages.DAILY_LOGS_LOAD_FAILED);
+      }
+      return data;
+    },
+  );
+
   app.get<{
-    Querystring: { date?: string };
+    Querystring: { date?: string; status?: string };
   }>(
     "/daily-logs",
     {
       schema: {
         tags: ["daily-logs"],
-        summary: "List assignments for a UK date (default: today)",
+        summary:
+          "List assignments for a UK date (default: today), or overdue missed logs",
         security: [...bearerSecurity],
         querystring: {
           type: "object",
@@ -38,27 +81,48 @@ export async function dailyLogsRoute(app: FastifyInstance) {
               type: "string",
               description: "YYYY-MM-DD (UK calendar). Omit for today.",
             },
+            status: {
+              type: "string",
+              enum: ["overdue"],
+              description:
+                "overdue = incomplete assignments before today (last 90 days). Ignores date.",
+            },
           },
         },
         response: {
-          200: { $ref: "DailyLogsListDto#" },
+          200: dailyLogsListResponseSchema,
           ...errorResponses,
         },
       },
     },
     async (request) => {
-      const { data, error, badRequest: invalidDate } =
+      const { data, error, badRequest: invalidQuery } =
         await listDailyLogsForCarer(request.supabase, request.user.id, {
           date: request.query.date,
+          status: request.query.status,
         });
 
-      if (invalidDate) {
-        throw badRequest(ErrorMessages.DAILY_LOG_INVALID_DATE);
+      if (invalidQuery) {
+        const status = request.query.status?.trim();
+        throw badRequest(
+          status && status.toLowerCase() !== "overdue"
+            ? ErrorMessages.DAILY_LOG_INVALID_STATUS
+            : ErrorMessages.DAILY_LOG_INVALID_DATE,
+        );
       }
       if (error) {
         request.log.error(error);
         throw internalError(ErrorMessages.DAILY_LOGS_LOAD_FAILED);
       }
+
+      request.log.debug(
+        {
+          date: request.query.date ?? null,
+          status: request.query.status ?? null,
+          count: data?.items.length ?? 0,
+        },
+        "daily-logs.list",
+      );
 
       return data;
     },

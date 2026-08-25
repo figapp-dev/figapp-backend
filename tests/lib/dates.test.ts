@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import {
+  addCalendarDays,
   getTodayUKDateString,
   timestampsMatch,
   toDateOnly,
@@ -29,6 +30,18 @@ describe("getTodayUKDateString", () => {
     vi.setSystemTime(new Date("2026-08-11T23:30:00Z"));
     // 00:30 BST on 12 Aug → UK date is 2026-08-12
     expect(getTodayUKDateString()).toBe("2026-08-12");
+  });
+});
+
+describe("addCalendarDays", () => {
+  it("steps across month and year boundaries", () => {
+    expect(addCalendarDays("2026-03-01", -1)).toBe("2026-02-28");
+    expect(addCalendarDays("2026-01-01", -1)).toBe("2025-12-31");
+    expect(addCalendarDays("2026-08-25", 0)).toBe("2026-08-25");
+  });
+
+  it("rejects invalid dates", () => {
+    expect(addCalendarDays("not-a-date", -1)).toBeNull();
   });
 });
 

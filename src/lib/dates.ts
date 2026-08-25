@@ -15,6 +15,19 @@ export function toDateOnly(value?: string | null): string | null {
   return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
 }
 
+/** Add calendar days to a YYYY-MM-DD key (UTC date parts, no timezone shift). */
+export function addCalendarDays(
+  isoDate: string,
+  days: number,
+): string | null {
+  const key = toDateOnly(isoDate);
+  if (!key) return null;
+  const [year, month, day] = key.split("-").map(Number);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  utc.setUTCDate(utc.getUTCDate() + days);
+  return utc.toISOString().slice(0, 10);
+}
+
 /** Compare optimistic-lock timestamps (ISO strings).
  * Empty expected is treated as "no lock provided" (match).
  * Callers that require a lock when a row exists must check emptiness first.

@@ -108,6 +108,32 @@ export async function listAssignmentsByDate(
   };
 }
 
+/** Incomplete assignments in a UK date window (oldest first). */
+export async function listIncompleteAssignmentsInRange(
+  supabase: SupabaseClient,
+  householdIds: string[],
+  options: { afterDate: string; beforeDate: string; limit: number },
+): Promise<{ data: DailyLogAssignmentListRow[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.DAILY_LOG_ASSIGNMENTS)
+    .select(ASSIGNMENT_LIST_SELECT)
+    .in("household_id", householdIds)
+    .gte("assigned_date", options.afterDate)
+    .lt("assigned_date", options.beforeDate)
+    .in("status", ["pending", "in_progress"])
+    .order("assigned_date", { ascending: false })
+    .limit(options.limit);
+
+  if (error) {
+    return { data: [], error };
+  }
+
+  return {
+    data: (data ?? []) as DailyLogAssignmentListRow[],
+    error: null,
+  };
+}
+
 /** Lean assignment row for access checks (e.g. file upload). */
 export async function findAssignmentAccessForHouseholds(
   supabase: SupabaseClient,
