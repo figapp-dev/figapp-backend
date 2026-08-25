@@ -4,4 +4,5 @@ export { createAgencyBillingRequest } from "./billing-request.js";
 export { updateAgencyBillingExemption } from "./exemption.js";
 export { collectDueLicencePayments } from "./collection.js";
 export { createAgencySeatCharge } from "./seat-charges.js";
+export { createAgencySeatReduction } from "./seat-reductions.js";
 export { processGoCardlessWebhook } from "./webhook-handlers.js";

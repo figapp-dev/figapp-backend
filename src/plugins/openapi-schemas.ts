@@ -698,6 +698,7 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       "skipped",
       "noticesSent",
       "agenciesSuspended",
+      "reductionsApplied",
       "errors",
     ],
     properties: {
@@ -706,6 +707,7 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       skipped: { type: "integer" },
       noticesSent: { type: "integer" },
       agenciesSuspended: { type: "integer" },
+      reductionsApplied: { type: "integer" },
       errors: {
         type: "array",
         items: {
@@ -742,6 +744,27 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       periodStart: { type: "string" },
       periodEnd: { type: "string" },
       gocardlessPaymentId: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "SeatReductionDto",
+    type: "object",
+    required: [
+      "agencyId",
+      "licenceCode",
+      "quantity",
+      "seatsPurchased",
+      "seatsAfterReduction",
+      "effectiveAt",
+    ],
+    properties: {
+      agencyId: { type: "string" },
+      licenceCode: { type: "string" },
+      quantity: { type: "integer" },
+      seatsPurchased: { type: "integer" },
+      seatsAfterReduction: { type: "integer" },
+      effectiveAt: { type: "string" },
     },
   });
 }

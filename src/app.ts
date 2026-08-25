@@ -95,8 +95,14 @@ export async function buildApp() {
   await app.register(sensible);
   await app.register(cors, {
     origin: env.corsOrigins,
+    credentials: true,
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Authorization", "Content-Type", "Accept"],
+    allowedHeaders: [
+      "Authorization",
+      "Content-Type",
+      "Accept",
+      "X-Requested-With",
+    ],
   });
   await app.register(rateLimit, {
     max: env.rateLimitMax,

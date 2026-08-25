@@ -102,6 +102,20 @@ export function licenceCodeForRole(role: string): BillableLicenceCode | null {
   return ROLE_TO_LICENCE_CODE[role] ?? null;
 }
 
+/**
+ * Persist capacity for an agency that has no (or zero) tenant_licences yet.
+ * Never lowers an already-stored purchased count.
+ */
+export function ensurePurchasedSeats(
+  licenceCode: BillableLicenceCode,
+  used: number,
+  storedPurchased: number | null | undefined,
+): number {
+  const seed = Math.max(STARTER_PACK_SEATS[licenceCode] ?? 0, Math.max(0, used));
+  if (storedPurchased == null) return seed;
+  return Math.max(storedPurchased, seed);
+}
+
 export function isBillableLicenceCode(
   code: string,
 ): code is BillableLicenceCode {

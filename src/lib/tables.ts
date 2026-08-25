@@ -27,4 +27,5 @@ export const TABLES = {
   BILLING_SUBSCRIPTIONS: "billing_subscriptions",
   BILLING_EVENTS: "billing_events",
   BILLING_SEAT_CHANGES: "billing_seat_changes",
+  INVITATION_TOKENS: "invitation_tokens",
 } as const;

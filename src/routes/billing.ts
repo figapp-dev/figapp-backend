@@ -4,6 +4,7 @@ import { bearerSecurity, errorResponses } from "../plugins/swagger.js";
 import {
   createAgencyBillingRequest,
   createAgencySeatCharge,
+  createAgencySeatReduction,
   getBillingAccess,
   getBillingSummary,
   updateAgencyBillingExemption,
@@ -16,11 +17,12 @@ import {
   notFound,
 } from "../lib/errors.js";
 import { ErrorMessages } from "../constants/error-messages.js";
-import { createBillingRequestBodySchema, billingExemptionBodySchema, seatChargeBodySchema } from "../schemas/billing.js";
+import { createBillingRequestBodySchema, billingExemptionBodySchema, seatChargeBodySchema, seatReductionBodySchema } from "../schemas/billing.js";
 import type {
   BillingExemptionBody,
   CreateBillingRequestBody,
   CreateSeatChargeBody,
+  CreateSeatReductionBody,
 } from "../types/billing.js";
 
 const agencyIdParams = {
@@ -247,6 +249,56 @@ export async function billingRoute(app: FastifyInstance) {
       if (result.error || !result.data) {
         request.log.error(result.error);
         throw internalError(ErrorMessages.BILLING_SEAT_CHARGE_FAILED);
+      }
+      return result.data;
+    },
+  );
+
+  app.post<{
+    Params: { agencyId: string };
+    Body: CreateSeatReductionBody;
+  }>(
+    "/billing/agencies/:agencyId/seat-reductions",
+    {
+      schema: {
+        tags: ["billing"],
+        summary: "Schedule unused licence seats to drop on the next Direct Debit",
+        description:
+          "Does not refund the current period. Cannot go below the starter pack or assigned seats.",
+        security: [...bearerSecurity],
+        params: agencyIdParams,
+        body: seatReductionBodySchema,
+        response: {
+          200: { $ref: "SeatReductionDto#" },
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const result = await createAgencySeatReduction(
+        request.supabase,
+        request.user.id,
+        request.params.agencyId,
+        request.body,
+      );
+
+      if (result.forbidden) {
+        throw forbidden(ErrorMessages.BILLING_FORBIDDEN);
+      }
+      if (result.notFound) {
+        throw notFound(ErrorMessages.BILLING_AGENCY_NOT_FOUND);
+      }
+      if (result.unsupported) {
+        throw badRequest(ErrorMessages.BILLING_SEAT_EXEMPT);
+      }
+      if (result.badRequest) {
+        throw badRequest(
+          result.error?.message ?? ErrorMessages.BILLING_SEAT_NO_PERIOD,
+        );
+      }
+      if (result.error || !result.data) {
+        request.log.error(result.error);
+        throw internalError(ErrorMessages.BILLING_SEAT_REDUCE_FAILED);
       }
       return result.data;
     },

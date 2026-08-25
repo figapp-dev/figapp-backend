@@ -32,6 +32,7 @@ import {
   ensureSetupFeePayment,
   requireBillingCustomer,
 } from "./subscription.js";
+import { ensureTenantLicences } from "./tenant-licences.js";
 import type { GcWebhookHandlerParams } from "./webhook-context.js";
 
 async function persistCustomerFromMandate(params: {
@@ -103,6 +104,8 @@ export async function activateMandate(params: {
   }
 
   if (!isUsableMandateStatus(params.mandate.status)) return;
+
+  await ensureTenantLicences(params.adminDb, params.agency.id);
 
   const invoicesRes = await listInvoicesByAgency(params.adminDb, params.agency.id);
   if (invoicesRes.error) throw invoicesRes.error;
