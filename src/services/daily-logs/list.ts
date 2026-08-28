@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getActiveHouseholdIds } from "../../lib/households.js";
+import { getCarerHouseholdIds } from "../../lib/households.js";
 import { toDailyLogListItemDto } from "../../mappers/daily-logs.js";
 import {
   listAssignmentsByDate,
@@ -11,7 +11,6 @@ import type {
 } from "../../types/daily-logs.js";
 import { loadSubjectNames, resolveSubjectName } from "./subjects.js";
 import {
-  OVERDUE_LIST_LIMIT,
   resolveDailyLogsListQuery,
   type DailyLogsListOptions,
 } from "./list-query.js";
@@ -30,7 +29,7 @@ export async function listDailyLogsForCarer(
     return { data: null, error: null, badRequest: true };
   }
 
-  const { householdIds, error: householdError } = await getActiveHouseholdIds(
+  const { householdIds, error: householdError } = await getCarerHouseholdIds(
     supabase,
     userId,
   );
@@ -44,9 +43,7 @@ export async function listDailyLogsForCarer(
   const listed =
     query.kind === "overdue"
       ? await listIncompleteAssignmentsInRange(supabase, householdIds, {
-          afterDate: query.afterDate,
           beforeDate: query.beforeDate,
-          limit: OVERDUE_LIST_LIMIT,
         })
       : await listAssignmentsByDate(supabase, householdIds, query.assignedDate);
 
@@ -59,12 +56,10 @@ export async function listDailyLogsForCarer(
     return { data: null, error: mapped.error };
   }
 
-  const items =
-    query.kind === "overdue"
-      ? mapped.items.filter((item) => item.isOverdue)
-      : mapped.items;
-
-  return { data: { items }, error: null };
+  // Overdue SQL is pending + assigned_date < today (not started).
+  // Do not also require isOverdue — that drops pending assignments whose nested
+  // log looks completed, which the web dashboard still counts.
+  return { data: { items: mapped.items }, error: null };
 }
 
 async function mapAssignmentRows(
@@ -75,13 +70,7 @@ async function mapAssignmentRows(
     return { items: [], error: null };
   }
 
-  const { childNames, parentNames, error: namesError } = await loadSubjectNames(
-    supabase,
-    rows,
-  );
-  if (namesError) {
-    return { items: [], error: namesError };
-  }
+  const { childNames, parentNames } = await loadSubjectNames(supabase, rows);
 
   return {
     items: rows.map((row) =>

@@ -1,7 +1,4 @@
-import { addCalendarDays, getTodayUKDateString, toDateOnly } from "../../lib/dates.js";
-
-export const OVERDUE_LOOKBACK_DAYS = 90;
-export const OVERDUE_LIST_LIMIT = 50;
+import { getTodayUKDateString, toDateOnly } from "../../lib/dates.js";
 
 export type DailyLogsListOptions = {
   date?: string;
@@ -10,7 +7,7 @@ export type DailyLogsListOptions = {
 
 export type ResolvedDailyLogsList =
   | { ok: true; kind: "date"; assignedDate: string }
-  | { ok: true; kind: "overdue"; afterDate: string; beforeDate: string }
+  | { ok: true; kind: "overdue"; beforeDate: string }
   | { ok: false };
 
 export function resolveDailyLogsListQuery(
@@ -20,12 +17,9 @@ export function resolveDailyLogsListQuery(
   const status = options?.status != null ? String(options.status).trim().toLowerCase() : "";
   if (status !== "") {
     if (status !== "overdue") return { ok: false };
-    const afterDate = addCalendarDays(today, -OVERDUE_LOOKBACK_DAYS);
-    if (!afterDate) return { ok: false };
     return {
       ok: true,
       kind: "overdue",
-      afterDate,
       beforeDate: today,
     };
   }

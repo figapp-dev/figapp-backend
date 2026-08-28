@@ -87,6 +87,7 @@ export type DailyLogDetailDto = {
   dueTime: string | null;
   completedAt: string | null;
   subjectName: string | null;
+  educationArrangement: string | null;
   /** Completed logs: true only on assigned UK date. Enforced again on PUT. */
   canEdit: boolean;
   /** True when assigned UK date is before today and not completed. */

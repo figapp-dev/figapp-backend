@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  OVERDUE_LOOKBACK_DAYS,
-  resolveDailyLogsListQuery,
-} from "../../../src/services/daily-logs/list-query.js";
-import { addCalendarDays } from "../../../src/lib/dates.js";
+import { resolveDailyLogsListQuery } from "../../../src/services/daily-logs/list-query.js";
 
 describe("resolveDailyLogsListQuery", () => {
   const today = "2026-08-25";
@@ -32,11 +28,10 @@ describe("resolveDailyLogsListQuery", () => {
     });
   });
 
-  it("resolves overdue to the lookback window before today", () => {
+  it("resolves overdue to all incomplete assignments before today", () => {
     expect(resolveDailyLogsListQuery({ status: "overdue" }, today)).toEqual({
       ok: true,
       kind: "overdue",
-      afterDate: addCalendarDays(today, -OVERDUE_LOOKBACK_DAYS),
       beforeDate: today,
     });
   });

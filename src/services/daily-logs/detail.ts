@@ -10,7 +10,11 @@ import type {
   DailyLogDetailDto,
 } from "../../types/daily-logs.js";
 import { loadContributorsForLog } from "./contributors.js";
-import { loadSubjectNames, resolveSubjectName } from "./subjects.js";
+import {
+  loadEducationArrangement,
+  loadSubjectNames,
+  resolveSubjectName,
+} from "./subjects.js";
 
 export async function getDailyLogForCarer(
   supabase: SupabaseClient,
@@ -41,13 +45,12 @@ export async function getDailyLogForCarer(
     return { data: null, error: null };
   }
 
-  const { childNames, parentNames, error: namesError } = await loadSubjectNames(
+  const { childNames, parentNames } = await loadSubjectNames(supabase, [row]);
+
+  const educationArrangement = await loadEducationArrangement(
     supabase,
-    [row],
+    row.child_id,
   );
-  if (namesError) {
-    return { data: null, error: namesError };
-  }
 
   const existingLog = pickLogForAssignment(row);
   let contributors: DailyLogContributorDto[] = [];
@@ -64,6 +67,7 @@ export async function getDailyLogForCarer(
       row,
       resolveSubjectName(row, childNames, parentNames),
       contributors,
+      educationArrangement,
     ),
     error: null,
   };
