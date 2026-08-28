@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildChildDisplayName } from "../../lib/child-names.js";
+import { educationArrangementFromLifeStory } from "../../mappers/children.js";
 import {
+  findChildLifeStoryData,
   listBiologicalParentNameRows,
   listChildrenNameRows,
 } from "../../repositories/daily-logs.js";
@@ -64,4 +66,15 @@ export function resolveSubjectName(
   }
 
   return null;
+}
+
+/** Best-effort: a failure here must not block opening the log. */
+export async function loadEducationArrangement(
+  supabase: SupabaseClient,
+  childId: string | null,
+): Promise<string | null> {
+  if (!childId) return null;
+  const { data, error } = await findChildLifeStoryData(supabase, childId);
+  if (error) return null;
+  return educationArrangementFromLifeStory(data);
 }

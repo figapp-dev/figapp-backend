@@ -110,6 +110,7 @@ export function toDailyLogDetailDto(
   row: DailyLogAssignmentDetailRow,
   subjectName: string | null,
   contributors: DailyLogContributorDto[] = [],
+  educationArrangement: string | null = null,
 ): DailyLogDetailDto {
   const template = firstOrNull<DailyLogTemplateDetailRow>(
     row.daily_log_templates,
@@ -133,6 +134,7 @@ export function toDailyLogDetailDto(
     dueTime: row.due_time,
     completedAt: row.completed_at,
     subjectName,
+    educationArrangement,
     canEdit: isDailyLogEditable(editOptions),
     isOverdue: isDailyLogOverdue(editOptions),
     template: toTemplateDetailDto(template),

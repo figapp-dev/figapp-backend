@@ -278,6 +278,7 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       currentPlacement: {
         anyOf: [{ $ref: "CurrentPlacementDto#" }, { type: "null" }],
       },
+      educationArrangement: nullableString,
     },
   });
 
@@ -454,6 +455,7 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       dueTime: nullableString,
       completedAt: nullableString,
       subjectName: nullableString,
+      educationArrangement: nullableString,
       canEdit: { type: "boolean" },
       isOverdue: { type: "boolean" },
       template: {

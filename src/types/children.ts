@@ -151,6 +151,7 @@ export type ChildDetailDto = {
   emergencyContacts: EmergencyContactDto[];
   professionalContacts: ProfessionalContactDto[];
   currentPlacement: CurrentPlacementDto | null;
+  educationArrangement: string | null;
 };
 
 export type PlacedParentDetailDto = {
@@ -170,7 +171,9 @@ export type PlacedParentDetailDto = {
 
 export type ChildrenDetailDto = ChildDetailDto | PlacedParentDetailDto;
 
-export type ChildDetailRow = ChildListRow;
+export type ChildDetailRow = ChildListRow & {
+  life_story_data?: unknown;
+};
 
 export type AllergyRow = {
   id: string;

@@ -149,6 +149,34 @@ export function toPlacementHistoryItemDto(
   };
 }
 
+const LEGACY_EDUCATION_ARRANGEMENT: Record<string, string> = {
+  "Home Learning/Tuitions": "Home Learning / Tuition",
+  "16+ (in work/trade)": "16+ Education, Employment or Training",
+};
+
+export function educationArrangementFromLifeStory(
+  raw: unknown,
+): string | null {
+  let data: unknown = raw;
+  if (typeof data === "string" && data.trim()) {
+    try {
+      data = JSON.parse(data) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!data || typeof data !== "object") return null;
+  const record = data as {
+    education_arrangement?: unknown;
+    educationArrangement?: unknown;
+  };
+  const value = record.education_arrangement ?? record.educationArrangement;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return LEGACY_EDUCATION_ARRANGEMENT[trimmed] ?? trimmed;
+}
+
 export function toChildDetailDto(
   row: ChildDetailRow,
   isParentChildPlacement: boolean,
@@ -183,6 +211,7 @@ export function toChildDetailDto(
     emergencyContacts: emergencyContacts.map(toEmergencyContactDto),
     professionalContacts: professionalContacts.map(toProfessionalContactDto),
     currentPlacement: toCurrentPlacementDto(currentPlacement),
+    educationArrangement: educationArrangementFromLifeStory(row.life_story_data),
   };
 }
 

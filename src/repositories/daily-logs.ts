@@ -108,21 +108,31 @@ export async function listAssignmentsByDate(
   };
 }
 
-/** Incomplete assignments in a UK date window (oldest first). */
+/** Incomplete pending assignments before a UK date (newest first).
+ * Status is pending-only so overdue is "not started". In-progress logs
+ * belong in the in-progress list, not this overdue set.
+ */
 export async function listIncompleteAssignmentsInRange(
   supabase: SupabaseClient,
   householdIds: string[],
-  options: { afterDate: string; beforeDate: string; limit: number },
+  options: { beforeDate: string; afterDate?: string; limit?: number },
 ): Promise<{ data: DailyLogAssignmentListRow[]; error: Error | null }> {
-  const { data, error } = await supabase
+  let query = supabase
     .from(TABLES.DAILY_LOG_ASSIGNMENTS)
     .select(ASSIGNMENT_LIST_SELECT)
     .in("household_id", householdIds)
-    .gte("assigned_date", options.afterDate)
     .lt("assigned_date", options.beforeDate)
-    .in("status", ["pending", "in_progress"])
-    .order("assigned_date", { ascending: false })
-    .limit(options.limit);
+    .ilike("status", "pending")
+    .order("assigned_date", { ascending: false });
+
+  if (options.afterDate) {
+    query = query.gte("assigned_date", options.afterDate);
+  }
+  if (options.limit != null) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return { data: [], error };
@@ -318,6 +328,26 @@ export async function listChildrenNameRows(
   }
 
   return { data: (data ?? []) as ChildNameRow[], error: null };
+}
+
+export async function findChildLifeStoryData(
+  supabase: SupabaseClient,
+  childId: string,
+): Promise<{ data: unknown; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.CHILDREN)
+    .select("life_story_data")
+    .eq("id", childId)
+    .maybeSingle();
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  return {
+    data: (data as { life_story_data?: unknown } | null)?.life_story_data ?? null,
+    error: null,
+  };
 }
 
 export async function listBiologicalParentNameRows(

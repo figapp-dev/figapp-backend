@@ -29,6 +29,11 @@ export const CHILD_LIST_SELECT = `
   placement_type_ids
 `;
 
+export const CHILD_DETAIL_SELECT = `
+  ${CHILD_LIST_SELECT.trim()},
+  life_story_data
+`;
+
 export const CURRENT_PLACEMENT_SELECT = `
   id,
   start_date,
@@ -352,7 +357,7 @@ export async function findChildById(
 ): Promise<{ data: ChildDetailRow | null; error: Error | null }> {
   const { data, error } = await supabase
     .from(TABLES.CHILDREN)
-    .select(CHILD_LIST_SELECT)
+    .select(CHILD_DETAIL_SELECT)
     .eq("id", childId)
     .maybeSingle();
 

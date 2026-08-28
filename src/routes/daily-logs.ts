@@ -42,7 +42,7 @@ export async function dailyLogsRoute(app: FastifyInstance) {
       schema: {
         tags: ["daily-logs"],
         summary:
-          "Incomplete assignments before today (last 90 days, newest first)",
+          "Incomplete assignments before today (same overdue set as the web dashboard)",
         security: [...bearerSecurity],
         response: {
           200: dailyLogsListResponseSchema,
@@ -60,6 +60,10 @@ export async function dailyLogsRoute(app: FastifyInstance) {
         request.log.error(error);
         throw internalError(ErrorMessages.DAILY_LOGS_LOAD_FAILED);
       }
+      request.log.debug(
+        { count: data?.items.length ?? 0 },
+        "daily-logs.overdue",
+      );
       return data;
     },
   );
@@ -85,7 +89,7 @@ export async function dailyLogsRoute(app: FastifyInstance) {
               type: "string",
               enum: ["overdue"],
               description:
-                "overdue = incomplete assignments before today (last 90 days). Ignores date.",
+                "overdue = incomplete assignments before today. Ignores date.",
             },
           },
         },
