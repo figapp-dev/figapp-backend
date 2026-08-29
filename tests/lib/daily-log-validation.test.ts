@@ -60,4 +60,37 @@ describe("validateDailyLogSubmit", () => {
   it("passes when no template fields exist", () => {
     expect(validateDailyLogSubmit({}, [])).toEqual({ ok: true });
   });
+
+  it("does not require allowance amount when pocket money was No", () => {
+    const evening = [
+      {
+        id: "evening",
+        title: "Evening, household tasks & mood",
+        fields: [
+          { id: "allowances_given", required: true },
+          { id: "allowance_amount", required: true },
+        ],
+      },
+    ];
+    expect(
+      validateDailyLogSubmit({ allowances_given: "No" }, evening),
+    ).toEqual({ ok: true });
+  });
+
+  it("requires allowance amount when pocket money was Yes", () => {
+    const evening = [
+      {
+        id: "evening",
+        fields: [
+          { id: "allowances_given", required: true },
+          { id: "allowance_amount", required: true },
+        ],
+      },
+    ];
+    const result = validateDailyLogSubmit({ allowances_given: "Yes" }, evening);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.missingFieldIds).toEqual(["allowance_amount"]);
+    }
+  });
 });
