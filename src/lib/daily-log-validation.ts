@@ -36,6 +36,62 @@ function isDidNotReturn(value: unknown): boolean {
   );
 }
 
+/** Mirrors figapp-new's constants/educationArrangements.ts (canonical source). */
+const LEGACY_TO_CANONICAL_ARRANGEMENT: Record<string, string> = {
+  "Home Learning/Tuitions": "Home Learning / Tuition",
+  "16+ (in work/trade)": "16+ Education, Employment or Training",
+};
+
+function normalizeEducationArrangement(value: unknown): string {
+  const text = typeof value === "string" ? value : "";
+  if (!text) return "";
+  return LEGACY_TO_CANONICAL_ARRANGEMENT[text] ?? text;
+}
+
+/** School / education section does not apply (16+, early years, legacy 16+ labels). */
+function isSchoolEducationSectionDisabled(
+  arrangement: string | null | undefined,
+): boolean {
+  const a = norm(normalizeEducationArrangement(arrangement));
+  if (!a) return false;
+
+  if (a.includes("16+")) return true;
+  if (a.includes("work/trade") || a.includes("in work")) return true;
+  if (a.includes("employment") && a.includes("training")) return true;
+  if (a.includes("early years")) return true;
+  if (a.includes("not yet school")) return true;
+
+  return false;
+}
+
+function isSchoolEducationSectionTitle(title: unknown): boolean {
+  const t = norm(title);
+  return t.includes("school") || t.includes("education");
+}
+
+/**
+ * Field ids that live under a School/Education-titled section. The chat/form
+ * UI (web + Flutter) never asks these when isSchoolEducationSectionDisabled
+ * is true, so submit must not require them either — matches
+ * useDailyLogFieldVisibility.ts's schoolVisibleFieldIds on web.
+ */
+function schoolSectionFieldIds(templateFields: unknown): Set<string> {
+  const ids = new Set<string>();
+  if (!Array.isArray(templateFields)) return ids;
+  for (const section of templateFields) {
+    if (!section || typeof section !== "object") continue;
+    const { title, fields } = section as { title?: unknown; fields?: unknown };
+    if (!isSchoolEducationSectionTitle(title) || !Array.isArray(fields)) {
+      continue;
+    }
+    for (const field of fields) {
+      const id = (field as TemplateFieldLike | null)?.id;
+      if (typeof id === "string" && id.trim()) ids.add(id);
+    }
+  }
+  return ids;
+}
+
 const householdFollowUps = new Set([
   "household_tasks_performed",
   "household_task_comments",
@@ -129,16 +185,26 @@ export type SubmitValidationResult =
  * - meta.role=items: only required when the group's toggle answers Yes
  * - Yes/No follow-ups (allowance amount, chores list, late details, …)
  *   are not required while their parent answer keeps them hidden
+ * - School/Education fields are not required when the child's education
+ *   arrangement (16+, early years, …) disables that section — the carer is
+ *   never shown those questions, so submit must not demand them either
  */
 export function validateDailyLogSubmit(
   dataJson: Record<string, unknown>,
   templateFields: unknown,
+  educationArrangement?: string | null,
 ): SubmitValidationResult {
   const allFields = flattenTemplateFields(templateFields);
   if (allFields.length === 0) {
     // No template structure — only empty-object guard elsewhere.
     return { ok: true };
   }
+
+  const exemptSchoolFieldIds = isSchoolEducationSectionDisabled(
+    educationArrangement,
+  )
+    ? schoolSectionFieldIds(templateFields)
+    : null;
 
   const missingFieldIds: string[] = [];
 
@@ -164,6 +230,7 @@ export function validateDailyLogSubmit(
 
     if (!isFieldRequired(field)) continue;
     if (isInactiveFollowUp(fieldId, dataJson)) continue;
+    if (exemptSchoolFieldIds?.has(fieldId)) continue;
 
     if (isValueEmpty(dataJson[fieldId])) {
       missingFieldIds.push(fieldId);
