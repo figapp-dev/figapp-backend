@@ -24,6 +24,7 @@ import type {
 } from "../../types/daily-logs.js";
 import { upsertContributorForSave } from "./contributors.js";
 import { getDailyLogForCarer } from "./detail.js";
+import { loadEducationArrangement } from "./subjects.js";
 import {
   buildAssignmentUpdate,
   buildDailyLogWritePayload,
@@ -62,9 +63,14 @@ export async function saveDailyLogForCarer(
   const { row, existingLog } = loaded;
 
   if (intent === "submit") {
+    const educationArrangement = await loadEducationArrangement(
+      supabase,
+      row.child_id,
+    );
     const validation = validateDailyLogSubmit(
       body.dataJson,
       templateFieldsFromAssignment(row),
+      educationArrangement,
     );
     if (!validation.ok) {
       return serviceFailure({
