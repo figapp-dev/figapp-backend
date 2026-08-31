@@ -8,6 +8,7 @@ export type DailyLogsListOptions = {
 export type ResolvedDailyLogsList =
   | { ok: true; kind: "date"; assignedDate: string }
   | { ok: true; kind: "overdue"; beforeDate: string }
+  | { ok: true; kind: "completed" }
   | { ok: false };
 
 export function resolveDailyLogsListQuery(
@@ -16,12 +17,13 @@ export function resolveDailyLogsListQuery(
 ): ResolvedDailyLogsList {
   const status = options?.status != null ? String(options.status).trim().toLowerCase() : "";
   if (status !== "") {
-    if (status !== "overdue") return { ok: false };
-    return {
-      ok: true,
-      kind: "overdue",
-      beforeDate: today,
-    };
+    if (status === "overdue") {
+      return { ok: true, kind: "overdue", beforeDate: today };
+    }
+    if (status === "completed") {
+      return { ok: true, kind: "completed" };
+    }
+    return { ok: false };
   }
 
   if (options?.date != null && String(options.date).trim() !== "") {

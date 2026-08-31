@@ -69,6 +69,23 @@ function isSchoolEducationSectionTitle(title: unknown): boolean {
   return t.includes("school") || t.includes("education");
 }
 
+/** All fields under a School/Education-titled section, in template order. */
+function schoolSectionFields(templateFields: unknown): TemplateFieldLike[] {
+  const out: TemplateFieldLike[] = [];
+  if (!Array.isArray(templateFields)) return out;
+  for (const section of templateFields) {
+    if (!section || typeof section !== "object") continue;
+    const { title, fields } = section as { title?: unknown; fields?: unknown };
+    if (!isSchoolEducationSectionTitle(title) || !Array.isArray(fields)) {
+      continue;
+    }
+    for (const field of fields) {
+      if (field && typeof field === "object") out.push(field as TemplateFieldLike);
+    }
+  }
+  return out;
+}
+
 /**
  * Field ids that live under a School/Education-titled section. The chat/form
  * UI (web + Flutter) never asks these when isSchoolEducationSectionDisabled
@@ -77,19 +94,97 @@ function isSchoolEducationSectionTitle(title: unknown): boolean {
  */
 function schoolSectionFieldIds(templateFields: unknown): Set<string> {
   const ids = new Set<string>();
-  if (!Array.isArray(templateFields)) return ids;
-  for (const section of templateFields) {
-    if (!section || typeof section !== "object") continue;
-    const { title, fields } = section as { title?: unknown; fields?: unknown };
-    if (!isSchoolEducationSectionTitle(title) || !Array.isArray(fields)) {
-      continue;
-    }
-    for (const field of fields) {
-      const id = (field as TemplateFieldLike | null)?.id;
-      if (typeof id === "string" && id.trim()) ids.add(id);
-    }
+  for (const field of schoolSectionFields(templateFields)) {
+    if (typeof field.id === "string" && field.id.trim()) ids.add(field.id);
   }
   return ids;
+}
+
+/** Same fuzzy id-or-label matching as web's templateUtils.findFieldId. */
+function findFieldId(
+  fields: TemplateFieldLike[],
+  ...needles: string[]
+): string | undefined {
+  const normNeedles = needles.map((n) => norm(n));
+  const field = fields.find((f) => {
+    const label = norm((f as { label?: unknown }).label);
+    const id = norm(f.id);
+    return normNeedles.some((n) => label.includes(n) || id.includes(n));
+  });
+  return field?.id;
+}
+
+type SchoolFollowUpIds = {
+  attendedId: string;
+  onTimeId: string;
+  absenceId?: string;
+  latenessId?: string;
+};
+
+function resolveSchoolFollowUpIds(templateFields: unknown): SchoolFollowUpIds {
+  const fields = schoolSectionFields(templateFields);
+  return {
+    attendedId:
+      findFieldId(fields, "attended school", "attended home learning", "attended tuition") ??
+      "attended_school",
+    onTimeId: findFieldId(fields, "attended on time") ?? "attended_on_time",
+    absenceId: findFieldId(fields, "reason for absence", "absence reason"),
+    latenessId: findFieldId(fields, "reason for lateness", "late reason"),
+  };
+}
+
+/**
+ * "Reason for absence"/"reason for lateness" only apply once the carer's
+ * attendance answer opens them — matches _isSchoolFieldVisible on Flutter
+ * and useDailyLogFieldVisibility.ts's schoolVisibleFieldIds on web. Without
+ * this, a field the carer is never shown (because attended=Yes/on-time)
+ * would still block submit.
+ */
+function isInactiveSchoolFollowUp(
+  fieldId: string,
+  dataJson: Record<string, unknown>,
+  schoolIds: SchoolFollowUpIds,
+): boolean {
+  const attended = norm(dataJson[schoolIds.attendedId]);
+  if (schoolIds.absenceId && fieldId === schoolIds.absenceId) {
+    return attended !== "no";
+  }
+  if (schoolIds.latenessId && fieldId === schoolIds.latenessId) {
+    const onTimeNo = norm(dataJson[schoolIds.onTimeId]) === "no";
+    return !(attended === "yes" && onTimeNo);
+  }
+  return false;
+}
+
+/** Web moodOptions.ts: accepts a real array, a JSON-encoded array string, or a lone legacy string. */
+function asMoodSelection(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text) return [];
+    if (text.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          return parsed.map((v) => String(v).trim()).filter(Boolean);
+        }
+      } catch {
+        // fall through to treating it as a single plain value
+      }
+    }
+    return [text];
+  }
+  return [];
+}
+
+const MOOD_FIELD_ID = "mood_of_the_day";
+const MOOD_COMMENTS_FIELD_ID = "mood_comments";
+const MOOD_OTHER_OPTION = "Other (Please Describe in the Comment Box below)";
+
+function moodSelectionIncludesOther(value: unknown): boolean {
+  return asMoodSelection(value).includes(MOOD_OTHER_OPTION);
 }
 
 const householdFollowUps = new Set([
@@ -205,6 +300,7 @@ export function validateDailyLogSubmit(
   )
     ? schoolSectionFieldIds(templateFields)
     : null;
+  const schoolFollowUpIds = resolveSchoolFollowUpIds(templateFields);
 
   const missingFieldIds: string[] = [];
 
@@ -231,10 +327,22 @@ export function validateDailyLogSubmit(
     if (!isFieldRequired(field)) continue;
     if (isInactiveFollowUp(fieldId, dataJson)) continue;
     if (exemptSchoolFieldIds?.has(fieldId)) continue;
+    if (isInactiveSchoolFollowUp(fieldId, dataJson, schoolFollowUpIds)) continue;
 
     if (isValueEmpty(dataJson[fieldId])) {
       missingFieldIds.push(fieldId);
     }
+  }
+
+  // Mood comments aren't marked required in the template, but become
+  // required once "Other" is one of the mood selections — matches
+  // collectValidationIssues.ts on web.
+  if (
+    moodSelectionIncludesOther(dataJson[MOOD_FIELD_ID]) &&
+    isValueEmpty(dataJson[MOOD_COMMENTS_FIELD_ID]) &&
+    !missingFieldIds.includes(MOOD_COMMENTS_FIELD_ID)
+  ) {
+    missingFieldIds.push(MOOD_COMMENTS_FIELD_ID);
   }
 
   if (missingFieldIds.length === 0) return { ok: true };

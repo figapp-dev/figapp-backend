@@ -68,6 +68,40 @@ export async function dailyLogsRoute(app: FastifyInstance) {
     },
   );
 
+  app.get(
+    "/daily-logs/completed",
+    {
+      schema: {
+        tags: ["daily-logs"],
+        summary:
+          "Completed assignments, most recently completed first (up to 50). " +
+          "The only source of \"done\" logs from before today — /daily-logs/overdue " +
+          "deliberately excludes completed ones.",
+        security: [...bearerSecurity],
+        response: {
+          200: dailyLogsListResponseSchema,
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const { data, error } = await listDailyLogsForCarer(
+        request.supabase,
+        request.user.id,
+        { status: "completed" },
+      );
+      if (error) {
+        request.log.error(error);
+        throw internalError(ErrorMessages.DAILY_LOGS_LOAD_FAILED);
+      }
+      request.log.debug(
+        { count: data?.items.length ?? 0 },
+        "daily-logs.completed",
+      );
+      return data;
+    },
+  );
+
   app.get<{
     Querystring: { date?: string; status?: string };
   }>(
@@ -87,9 +121,10 @@ export async function dailyLogsRoute(app: FastifyInstance) {
             },
             status: {
               type: "string",
-              enum: ["overdue"],
+              enum: ["overdue", "completed"],
               description:
-                "overdue = incomplete assignments before today. Ignores date.",
+                "overdue = incomplete assignments before today (ignores date). " +
+                "completed = most recently completed assignments (ignores date).",
             },
           },
         },

@@ -3,6 +3,7 @@ import { getCarerHouseholdIds } from "../../lib/households.js";
 import { toDailyLogListItemDto } from "../../mappers/daily-logs.js";
 import {
   listAssignmentsByDate,
+  listCompletedAssignments,
   listIncompleteAssignmentsInRange,
 } from "../../repositories/daily-logs.js";
 import type {
@@ -45,7 +46,9 @@ export async function listDailyLogsForCarer(
       ? await listIncompleteAssignmentsInRange(supabase, householdIds, {
           beforeDate: query.beforeDate,
         })
-      : await listAssignmentsByDate(supabase, householdIds, query.assignedDate);
+      : query.kind === "completed"
+        ? await listCompletedAssignments(supabase, householdIds)
+        : await listAssignmentsByDate(supabase, householdIds, query.assignedDate);
 
   if (listed.error) {
     return { data: null, error: listed.error };
