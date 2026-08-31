@@ -4,6 +4,7 @@ import { validateDailyLogSubmit } from "../../lib/daily-log-validation.js";
 import { timestampsMatch } from "../../lib/dates.js";
 import { getActiveHouseholdIds } from "../../lib/households.js";
 import { isPlainObject } from "../../lib/objects.js";
+import { insertParentingAssessmentSection } from "../../lib/parenting-assessment.js";
 import {
   serviceFailure,
   serviceSuccess,
@@ -24,6 +25,7 @@ import type {
 } from "../../types/daily-logs.js";
 import { upsertContributorForSave } from "./contributors.js";
 import { getDailyLogForCarer } from "./detail.js";
+import { loadParentingAssessmentSection } from "./parenting-assessment.js";
 import { loadEducationArrangement } from "./subjects.js";
 import {
   buildAssignmentUpdate,
@@ -67,9 +69,17 @@ export async function saveDailyLogForCarer(
       supabase,
       row.child_id,
     );
+    const parentingAssessmentSection = await loadParentingAssessmentSection(
+      supabase,
+      row,
+    );
+    const templateFields = insertParentingAssessmentSection(
+      templateFieldsFromAssignment(row),
+      parentingAssessmentSection,
+    );
     const validation = validateDailyLogSubmit(
       body.dataJson,
-      templateFieldsFromAssignment(row),
+      templateFields,
       educationArrangement,
     );
     if (!validation.ok) {

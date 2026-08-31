@@ -1,6 +1,7 @@
 import { toDateOnly } from "../lib/dates.js";
 import { isDailyLogEditable, isDailyLogOverdue } from "../lib/daily-log-status.js";
 import { isPlainObject } from "../lib/objects.js";
+import { insertParentingAssessmentSection } from "../lib/parenting-assessment.js";
 import type {
   DailyLogAssignmentDetailRow,
   DailyLogAssignmentListRow,
@@ -83,12 +84,16 @@ export function pickLogForAssignment(
 
 function toTemplateDetailDto(
   row: DailyLogTemplateDetailRow | null,
+  parentingAssessmentSection: Record<string, unknown> | null,
 ): DailyLogTemplateDetailDto | null {
   if (!row) return null;
   return {
     id: row.id,
     name: row.name,
-    templateFields: row.template_fields ?? [],
+    templateFields: insertParentingAssessmentSection(
+      row.template_fields ?? [],
+      parentingAssessmentSection,
+    ),
   };
 }
 
@@ -111,6 +116,7 @@ export function toDailyLogDetailDto(
   subjectName: string | null,
   contributors: DailyLogContributorDto[] = [],
   educationArrangement: string | null = null,
+  parentingAssessmentSection: Record<string, unknown> | null = null,
 ): DailyLogDetailDto {
   const template = firstOrNull<DailyLogTemplateDetailRow>(
     row.daily_log_templates,
@@ -137,7 +143,7 @@ export function toDailyLogDetailDto(
     educationArrangement,
     canEdit: isDailyLogEditable(editOptions),
     isOverdue: isDailyLogOverdue(editOptions),
-    template: toTemplateDetailDto(template),
+    template: toTemplateDetailDto(template, parentingAssessmentSection),
     log: toLogDetailDto(log),
     contributors,
   };
