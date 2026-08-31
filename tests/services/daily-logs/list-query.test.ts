@@ -36,6 +36,13 @@ describe("resolveDailyLogsListQuery", () => {
     });
   });
 
+  it("resolves completed to the completed-assignments query", () => {
+    expect(resolveDailyLogsListQuery({ status: "completed" }, today)).toEqual({
+      ok: true,
+      kind: "completed",
+    });
+  });
+
   it("rejects an unknown status", () => {
     expect(resolveDailyLogsListQuery({ status: "pending" }, today)).toEqual({
       ok: false,

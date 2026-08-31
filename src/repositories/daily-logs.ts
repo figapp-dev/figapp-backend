@@ -108,6 +108,34 @@ export async function listAssignmentsByDate(
   };
 }
 
+/** Completed assignments, most recently completed first — the only source
+ * of "done" logs from before today, since listIncompleteAssignmentsInRange
+ * deliberately excludes them. Bounded by `limit` (default 50); no cursor
+ * yet, add one if the carer-facing history view needs to page further.
+ */
+export async function listCompletedAssignments(
+  supabase: SupabaseClient,
+  householdIds: string[],
+  options: { limit?: number } = {},
+): Promise<{ data: DailyLogAssignmentListRow[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.DAILY_LOG_ASSIGNMENTS)
+    .select(ASSIGNMENT_LIST_SELECT)
+    .in("household_id", householdIds)
+    .in("status", ["completed", "submitted"])
+    .order("completed_at", { ascending: false, nullsFirst: false })
+    .limit(options.limit ?? 50);
+
+  if (error) {
+    return { data: [], error };
+  }
+
+  return {
+    data: (data ?? []) as DailyLogAssignmentListRow[],
+    error: null,
+  };
+}
+
 /** Incomplete pending assignments before a UK date (newest first).
  * Status is pending-only so overdue is "not started". In-progress logs
  * belong in the in-progress list, not this overdue set.
