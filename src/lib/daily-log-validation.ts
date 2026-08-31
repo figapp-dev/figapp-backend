@@ -146,6 +146,9 @@ function isInactiveSchoolFollowUp(
   schoolIds: SchoolFollowUpIds,
 ): boolean {
   const attended = norm(dataJson[schoolIds.attendedId]);
+  if (fieldId === schoolIds.onTimeId) {
+    return attended !== "yes";
+  }
   if (schoolIds.absenceId && fieldId === schoolIds.absenceId) {
     return attended !== "no";
   }

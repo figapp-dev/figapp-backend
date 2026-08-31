@@ -10,6 +10,7 @@ import type {
   DailyLogDetailDto,
 } from "../../types/daily-logs.js";
 import { loadContributorsForLog } from "./contributors.js";
+import { loadParentingAssessmentSection } from "./parenting-assessment.js";
 import {
   loadEducationArrangement,
   loadSubjectNames,
@@ -51,6 +52,10 @@ export async function getDailyLogForCarer(
     supabase,
     row.child_id,
   );
+  const parentingAssessmentSection = await loadParentingAssessmentSection(
+    supabase,
+    row,
+  );
 
   const existingLog = pickLogForAssignment(row);
   let contributors: DailyLogContributorDto[] = [];
@@ -68,6 +73,7 @@ export async function getDailyLogForCarer(
       resolveSubjectName(row, childNames, parentNames),
       contributors,
       educationArrangement,
+      parentingAssessmentSection,
     ),
     error: null,
   };

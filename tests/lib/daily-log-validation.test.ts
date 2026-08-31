@@ -93,4 +93,40 @@ describe("validateDailyLogSubmit", () => {
       expect(result.missingFieldIds).toEqual(["allowance_amount"]);
     }
   });
+
+  const school = [
+    {
+      id: "school",
+      title: "School / Education",
+      fields: [
+        {
+          id: "attended_school",
+          label: "Did the child attend school today?",
+          required: true,
+        },
+        {
+          id: "attended_on_time",
+          label: "Did the child arrive at school on time?",
+          required: true,
+        },
+      ],
+    },
+  ];
+
+  it("does not require 'arrived on time' when the child did not attend school", () => {
+    expect(
+      validateDailyLogSubmit({ attended_school: "No" }, school),
+    ).toEqual({ ok: true });
+  });
+
+  it("requires 'arrived on time' once the child attended school", () => {
+    const result = validateDailyLogSubmit(
+      { attended_school: "Yes" },
+      school,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.missingFieldIds).toEqual(["attended_on_time"]);
+    }
+  });
 });

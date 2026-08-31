@@ -397,3 +397,44 @@ export async function listBiologicalParentNameRows(
 
   return { data: (data ?? []) as ParentNameRow[], error: null };
 }
+
+export type ActivePlacedParentRow = {
+  biological_parent_id: string;
+  child_biological_parents: {
+    id: string;
+    name: string | null;
+    relationship: string | null;
+    date_of_birth: string | null;
+  } | null;
+};
+
+/** Active placements linking a child to its placed biological parents,
+ * with each parent's DOB — used to decide parenting-assessment eligibility. */
+export async function listActivePlacedParents(
+  supabase: SupabaseClient,
+  childId: string,
+  householdId: string,
+): Promise<{ data: ActivePlacedParentRow[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.BIOLOGICAL_PARENT_PLACEMENTS)
+    .select(
+      `
+      biological_parent_id,
+      child_biological_parents:biological_parent_id (
+        id,
+        name,
+        relationship,
+        date_of_birth
+      )
+    `,
+    )
+    .eq("child_id", childId)
+    .eq("household_id", householdId)
+    .eq("is_active", true);
+
+  if (error) {
+    return { data: [], error };
+  }
+
+  return { data: (data ?? []) as unknown as ActivePlacedParentRow[], error: null };
+}
