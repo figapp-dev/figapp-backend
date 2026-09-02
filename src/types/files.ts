@@ -2,15 +2,16 @@
  * Which FigApp feature the file belongs to.
  * `id` meaning changes per resource:
  * - daily_log → same id as GET /daily-logs/:id (assignment id)
+ * - figchat → conversation id
  * - (later) life_story → child id, document → document id, etc.
  */
-export type FileResource = "daily_log";
+export type FileResource = "daily_log" | "figchat";
 
 export type CreateFileUploadBody = {
   resource: FileResource;
   id: string;
-  /** Template field / question id (required for daily_log). */
-  fieldId: string;
+  /** Template field / question id — required for daily_log, unused for figchat. */
+  fieldId?: string;
   fileName: string;
 };
 

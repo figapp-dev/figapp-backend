@@ -769,4 +769,22 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       effectiveAt: { type: "string" },
     },
   });
+
+  app.addSchema({
+    $id: "FigChatMessageDto",
+    type: "object",
+    required: ["id", "conversationId"],
+    properties: {
+      id: { type: "string" },
+      conversationId: { type: "string" },
+      senderId: nullableString,
+      content: nullableString,
+      createdAt: nullableString,
+      updatedAt: nullableString,
+      attachmentUrl: nullableString,
+      attachmentType: nullableString,
+      attachmentName: nullableString,
+      attachmentSize: { type: "number", nullable: true },
+    },
+  });
 }

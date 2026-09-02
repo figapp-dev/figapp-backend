@@ -28,4 +28,8 @@ export const TABLES = {
   BILLING_EVENTS: "billing_events",
   BILLING_SEAT_CHANGES: "billing_seat_changes",
   INVITATION_TOKENS: "invitation_tokens",
+
+  CONVERSATIONS: "conversations",
+  CONVERSATION_PARTICIPANTS: "conversation_participants",
+  AGENCY_FIG_CHAT: "agency_fig_chat",
 } as const;

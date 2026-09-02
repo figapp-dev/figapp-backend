@@ -49,3 +49,20 @@ export function buildDailyLogStoragePath(options: {
   const ext = extensionFromFileName(options.fileName);
   return `${subjectId}/${options.assignment.id}/${options.fieldId}/${randomUUID()}.${ext}`;
 }
+
+/** Path shape: `{conversationId}/{uuid}.ext`. */
+export function buildFigChatStoragePath(options: {
+  conversationId: string;
+  fileName: string;
+}): string {
+  const ext = extensionFromFileName(options.fileName);
+  return `${options.conversationId}/${randomUUID()}.${ext}`;
+}
+
+/** First path segment — used to confirm an attachment path belongs to the
+ * conversation a message is being sent to, before signing a download URL
+ * for it. */
+export function figChatConversationIdFromPath(path: string): string | null {
+  const parts = path.split("/").filter(Boolean);
+  return parts[0] ?? null;
+}
