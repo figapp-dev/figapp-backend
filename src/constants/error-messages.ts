@@ -45,6 +45,11 @@ export const ErrorMessages = {
   FILE_BUCKET_NOT_ALLOWED: "Storage bucket not allowed",
   FILE_ACCESS_DENIED: "You cannot upload or access files for this resource",
 
+  FIGCHAT_MESSAGE_INVALID_BODY: "content is required",
+  FIGCHAT_MESSAGE_SEND_FAILED: "Failed to send message",
+  FIGCHAT_ACCESS_DENIED: "You are not a participant in this conversation",
+  FIGCHAT_MARK_READ_FAILED: "Failed to mark conversation as read",
+
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",

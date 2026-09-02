@@ -1,0 +1,110 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
+import {
+  DEFAULT_SIGNED_URL_EXPIRES_SECONDS,
+  STORAGE_BUCKETS,
+} from "../../lib/storage.js";
+import { toFigChatMessageDto } from "../../mappers/figchat.js";
+import { createSignedDownloadUrl } from "../../repositories/files.js";
+import {
+  findAgencyIdForUser,
+  findOwnParticipant,
+  insertFigChatMessage,
+  markConversationRead,
+  touchConversation,
+} from "../../repositories/figchat.js";
+import { figChatConversationIdFromPath } from "../files/paths.js";
+import type {
+  FigChatMessageDto,
+  SendFigChatMessageBody,
+} from "../../types/figchat.js";
+
+export async function sendFigChatMessageForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  conversationId: string,
+  body: SendFigChatMessageBody,
+): Promise<
+  | ReturnType<typeof serviceFailure>
+  | ReturnType<typeof serviceSuccess<FigChatMessageDto>>
+> {
+  const content = body.content?.trim() || null;
+  const attachment = body.attachment;
+  if (!content && !attachment) {
+    return serviceFailure({ badRequest: true });
+  }
+
+  const participant = await findOwnParticipant(supabase, conversationId, userId);
+  if (participant.error) {
+    return serviceFailure({ error: participant.error });
+  }
+  if (!participant.data || participant.data.archived) {
+    return serviceFailure({ forbidden: true });
+  }
+
+  let attachmentUrl: string | null = null;
+  let attachmentType: string | null = null;
+  let attachmentName: string | null = null;
+  let attachmentSize: number | null = null;
+
+  if (attachment) {
+    const path = attachment.path.trim();
+    if (!path || figChatConversationIdFromPath(path) !== conversationId) {
+      return serviceFailure({ forbidden: true });
+    }
+
+    // Web stores a signed URL directly in attachment_url (not a raw path),
+    // and mobile must match that shared-column format exactly — see the
+    // FigChat plan notes on why this isn't the raw-path-sign-on-read pattern
+    // used for daily-log attachments. Known limitation: this link expires
+    // after DEFAULT_SIGNED_URL_EXPIRES_SECONDS, same as web's.
+    const signed = await createSignedDownloadUrl(
+      supabase,
+      STORAGE_BUCKETS.FIGCHAT,
+      path,
+      DEFAULT_SIGNED_URL_EXPIRES_SECONDS,
+    );
+    if (signed.error || !signed.data) {
+      return serviceFailure({
+        error: signed.error ?? new Error("Failed to sign attachment URL"),
+      });
+    }
+
+    attachmentUrl = signed.data.signedUrl;
+    attachmentType = attachment.contentType ?? null;
+    attachmentName = attachment.name;
+    attachmentSize = attachment.size ?? null;
+  }
+
+  const agency = await findAgencyIdForUser(supabase, userId);
+  if (agency.error) {
+    return serviceFailure({ error: agency.error });
+  }
+
+  const inserted = await insertFigChatMessage(supabase, {
+    conversation_id: conversationId,
+    sender_id: userId,
+    agency_id: agency.agencyId,
+    content,
+    attachment_url: attachmentUrl,
+    attachment_type: attachmentType,
+    attachment_name: attachmentName,
+    attachment_size: attachmentSize,
+  });
+  if (inserted.error || !inserted.data) {
+    return serviceFailure({
+      error: inserted.error ?? new Error("Failed to insert message"),
+    });
+  }
+
+  // Best-effort — a sender always considers their own message "read", and the
+  // conversation's updated_at drives list-sort ordering. Neither should block
+  // a successful send if they fail.
+  const nowIso = new Date().toISOString();
+  await Promise.all([
+    touchConversation(supabase, conversationId, nowIso),
+    markConversationRead(supabase, conversationId, userId, nowIso),
+  ]);
+
+  return serviceSuccess(toFigChatMessageDto(inserted.data));
+}

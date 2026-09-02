@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildFigChatStoragePath,
   dailyLogAssignmentIdFromPath,
   dailyLogStorageSubjectId,
   extensionFromFileName,
+  figChatConversationIdFromPath,
   sanitizeFileName,
 } from "../../../src/services/files/paths.js";
 
@@ -38,6 +40,25 @@ describe("dailyLogAssignmentIdFromPath", () => {
       dailyLogAssignmentIdFromPath("c1/a1/field-x/uuid.png"),
     ).toBe("a1");
     expect(dailyLogAssignmentIdFromPath("only-one")).toBeNull();
+  });
+});
+
+describe("buildFigChatStoragePath / figChatConversationIdFromPath", () => {
+  it("scopes the path under the conversation id and round-trips it back out", () => {
+    const path = buildFigChatStoragePath({
+      conversationId: "conv-1",
+      fileName: "photo.png",
+    });
+    expect(path).toMatch(/^conv-1\/[^/]+\.png$/);
+    expect(figChatConversationIdFromPath(path)).toBe("conv-1");
+  });
+
+  it("rejects a path scoped to a different conversation", () => {
+    const path = buildFigChatStoragePath({
+      conversationId: "conv-1",
+      fileName: "photo.png",
+    });
+    expect(figChatConversationIdFromPath(path)).not.toBe("conv-2");
   });
 });
 

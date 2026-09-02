@@ -6,23 +6,24 @@ import type {
 /** POST /files/signed-upload-url */
 export const createFileUploadBodySchema = {
   type: "object",
-  required: ["resource", "id", "fieldId", "fileName"],
+  required: ["resource", "id", "fileName"],
   additionalProperties: false,
   properties: {
     resource: {
       type: "string",
-      enum: ["daily_log"],
+      enum: ["daily_log", "figchat"],
       description: "Feature the file belongs to",
     },
     id: {
       type: "string",
       minLength: 1,
-      description: "For daily_log: assignment id (same as GET /daily-logs/:id)",
+      description:
+        "For daily_log: assignment id (same as GET /daily-logs/:id). For figchat: conversation id.",
     },
     fieldId: {
       type: "string",
       minLength: 1,
-      description: "Template field / question id",
+      description: "Template field / question id (required for daily_log only)",
     },
     fileName: { type: "string", minLength: 1 },
   },
