@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { TABLES } from "../lib/tables.js";
 import type {
   ConversationParticipantRow,
+  ConversationRow,
   FigChatMessageRow,
 } from "../types/figchat.js";
 
@@ -50,6 +51,26 @@ export async function findOwnParticipant(
     return { data: null, error };
   }
   return { data: (data as ConversationParticipantRow | null) ?? null, error: null };
+}
+
+/** The conversation's own type — 'broadcast' conversations only accept
+ * inserts from an admin participant, and 'broadcast_delivery' threads never
+ * accept a direct client insert at all (see messages_insert_if_participant's
+ * RLS check, which enforces both server-side too). */
+export async function findConversationType(
+  supabase: SupabaseClient,
+  conversationId: string,
+): Promise<{ data: ConversationRow | null; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.CONVERSATIONS)
+    .select("id, agency_id, type")
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (error) {
+    return { data: null, error };
+  }
+  return { data: (data as ConversationRow | null) ?? null, error: null };
 }
 
 export async function insertFigChatMessage(

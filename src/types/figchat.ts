@@ -35,6 +35,12 @@ export type ConversationParticipantRow = {
   archived: boolean | null;
 };
 
+export type ConversationRow = {
+  id: string;
+  agency_id: string | null;
+  type: string | null;
+};
+
 /** `attachment.path` must come from a prior POST /files/signed-upload-url
  * call with resource "figchat" for this same conversation — the service
  * verifies the path's conversation-id prefix before signing a download URL

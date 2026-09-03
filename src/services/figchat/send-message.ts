@@ -8,6 +8,7 @@ import { toFigChatMessageDto } from "../../mappers/figchat.js";
 import { createSignedDownloadUrl } from "../../repositories/files.js";
 import {
   findAgencyIdForUser,
+  findConversationType,
   findOwnParticipant,
   insertFigChatMessage,
   markConversationRead,
@@ -40,6 +41,32 @@ export async function sendFigChatMessageForUser(
   }
   if (!participant.data || participant.data.archived) {
     return serviceFailure({ forbidden: true });
+  }
+
+  const conversation = await findConversationType(supabase, conversationId);
+  if (conversation.error) {
+    return serviceFailure({ error: conversation.error });
+  }
+  const conversationType = conversation.data?.type ?? null;
+  if (conversationType === "broadcast_delivery") {
+    // Delivery threads are written only by the server-side fan-out trigger —
+    // matches the RLS policy's own NOT EXISTS(...'broadcast_delivery') check.
+    return serviceFailure({
+      forbidden: true,
+      error: new Error(
+        `FigChat send blocked: conversation ${conversationId} is type "broadcast_delivery" (sender=${userId})`,
+      ),
+    });
+  }
+  if (conversationType === "broadcast" && participant.data.role !== "admin") {
+    // Broadcast hubs only accept sends from an admin participant — matches
+    // is_conversation_admin(), which the RLS policy also enforces.
+    return serviceFailure({
+      forbidden: true,
+      error: new Error(
+        `FigChat send blocked: conversation ${conversationId} is type "broadcast" and sender ${userId} has role "${participant.data.role}", not admin`,
+      ),
+    });
   }
 
   let attachmentUrl: string | null = null;
