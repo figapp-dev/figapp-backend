@@ -80,6 +80,18 @@ export async function sendFigChatMessageForUser(
   if (agency.error) {
     return serviceFailure({ error: agency.error });
   }
+  if (!agency.agencyId) {
+    // Inserting with agency_id: null can never satisfy the
+    // is_user_in_agency() RLS check, so this would always surface as an
+    // opaque 42501 from Postgres. Fail fast with a clearer signal instead —
+    // this means the sender has no (unarchived-or-not) agency_users row at
+    // all, which is a data problem, not a filter mismatch.
+    return serviceFailure({
+      error: new Error(
+        `FigChat send: no agency_users row found for sender ${userId}`,
+      ),
+    });
+  }
 
   const inserted = await insertFigChatMessage(supabase, {
     conversation_id: conversationId,
@@ -93,7 +105,12 @@ export async function sendFigChatMessageForUser(
   });
   if (inserted.error || !inserted.data) {
     return serviceFailure({
-      error: inserted.error ?? new Error("Failed to insert message"),
+      error:
+        inserted.error != null
+          ? new Error(
+              `${inserted.error.message} [conversationId=${conversationId} agencyId=${agency.agencyId} senderId=${userId}]`,
+            )
+          : new Error("Failed to insert message"),
     });
   }
 
