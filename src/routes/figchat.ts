@@ -37,6 +37,9 @@ export async function figChatRoute(app: FastifyInstance) {
         throw badRequest(ErrorMessages.FIGCHAT_MESSAGE_INVALID_BODY);
       }
       if (result.forbidden) {
+        if (result.error) {
+          request.log.warn(result.error);
+        }
         throw forbidden(ErrorMessages.FIGCHAT_ACCESS_DENIED);
       }
       if (result.error || !result.data) {
