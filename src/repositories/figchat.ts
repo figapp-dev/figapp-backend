@@ -9,11 +9,17 @@ export async function findAgencyIdForUser(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{ agencyId: string | null; error: Error | null }> {
+  // No is_archived filter here — must match is_user_in_agency's own check
+  // exactly (agency_id + user_id only), since the agency_id this resolves
+  // feeds straight into the "messages_insert_if_participant" RLS policy's
+  // is_user_in_agency(agency_id, auth.uid()) check. An is_archived filter
+  // this function doesn't have can return no row (agencyId: null) for a
+  // row where is_archived is NULL rather than explicitly false, and NULL
+  // can never satisfy that RLS check — causing a silent 42501 on insert.
   const { data, error } = await supabase
     .from(TABLES.AGENCY_USERS)
     .select("agency_id")
     .eq("user_id", userId)
-    .eq("is_archived", false)
     .maybeSingle();
 
   if (error) {
