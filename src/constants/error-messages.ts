@@ -48,6 +48,10 @@ export const ErrorMessages = {
   FIGCHAT_MESSAGE_INVALID_BODY: "content is required",
   FIGCHAT_MESSAGE_SEND_FAILED: "Failed to send message",
   FIGCHAT_ACCESS_DENIED: "You are not a participant in this conversation",
+  FIGCHAT_BROADCAST_DELIVERY_BLOCKED:
+    "This is a system delivery thread and can't receive messages directly.",
+  FIGCHAT_BROADCAST_ADMIN_ONLY:
+    "Only an agency admin can post in this broadcast conversation.",
   FIGCHAT_MARK_READ_FAILED: "Failed to mark conversation as read",
 
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
