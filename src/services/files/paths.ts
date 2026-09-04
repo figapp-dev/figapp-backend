@@ -50,19 +50,29 @@ export function buildDailyLogStoragePath(options: {
   return `${subjectId}/${options.assignment.id}/${options.fieldId}/${randomUUID()}.${ext}`;
 }
 
-/** Path shape: `{conversationId}/{uuid}.ext`. */
+/**
+ * Path shape: `agency/{agencyId}/conversation/{conversationId}/{uuid}.ext`
+ * — must match this exactly (not just any prefix). The 'figchat' storage
+ * bucket's RLS policies (figchat_insert_same_agency_or_admin /
+ * _select_same_agency_or_admin) require foldername(name)[1] = 'agency' and
+ * foldername(name)[2] = the caller's own agency_id; anything else — e.g. a
+ * bare `{conversationId}/...` path — fails with an opaque "new row violates
+ * row-level security policy" on the storage insert. Matches web's own
+ * makeStorageKey() in FigChatWorkspace.tsx, since this bucket is shared.
+ */
 export function buildFigChatStoragePath(options: {
+  agencyId: string;
   conversationId: string;
   fileName: string;
 }): string {
   const ext = extensionFromFileName(options.fileName);
-  return `${options.conversationId}/${randomUUID()}.${ext}`;
+  return `agency/${options.agencyId}/conversation/${options.conversationId}/${randomUUID()}.${ext}`;
 }
 
-/** First path segment — used to confirm an attachment path belongs to the
- * conversation a message is being sent to, before signing a download URL
- * for it. */
+/** The conversation id segment of a buildFigChatStoragePath() path — used to
+ * confirm an attachment path belongs to the conversation a message is being
+ * sent to, before signing a download URL for it. */
 export function figChatConversationIdFromPath(path: string): string | null {
   const parts = path.split("/").filter(Boolean);
-  return parts[0] ?? null;
+  return parts[3] ?? null;
 }

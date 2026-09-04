@@ -40,6 +40,12 @@ export async function figChatRoute(app: FastifyInstance) {
         if (result.error) {
           request.log.warn(result.error);
         }
+        if (result.error?.name === "FigChatBroadcastDeliveryBlocked") {
+          throw forbidden(ErrorMessages.FIGCHAT_BROADCAST_DELIVERY_BLOCKED);
+        }
+        if (result.error?.name === "FigChatBroadcastAdminOnly") {
+          throw forbidden(ErrorMessages.FIGCHAT_BROADCAST_ADMIN_ONLY);
+        }
         throw forbidden(ErrorMessages.FIGCHAT_ACCESS_DENIED);
       }
       if (result.error || !result.data) {

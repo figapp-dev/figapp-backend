@@ -44,17 +44,21 @@ describe("dailyLogAssignmentIdFromPath", () => {
 });
 
 describe("buildFigChatStoragePath / figChatConversationIdFromPath", () => {
-  it("scopes the path under the conversation id and round-trips it back out", () => {
+  it("matches the figchat bucket's RLS-required shape and round-trips the conversation id back out", () => {
     const path = buildFigChatStoragePath({
+      agencyId: "agency-1",
       conversationId: "conv-1",
       fileName: "photo.png",
     });
-    expect(path).toMatch(/^conv-1\/[^/]+\.png$/);
+    expect(path).toMatch(
+      /^agency\/agency-1\/conversation\/conv-1\/[^/]+\.png$/,
+    );
     expect(figChatConversationIdFromPath(path)).toBe("conv-1");
   });
 
   it("rejects a path scoped to a different conversation", () => {
     const path = buildFigChatStoragePath({
+      agencyId: "agency-1",
       conversationId: "conv-1",
       fileName: "photo.png",
     });

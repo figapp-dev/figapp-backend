@@ -2,7 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
 import { STORAGE_BUCKETS } from "../../lib/storage.js";
 import { createSignedUploadUrl } from "../../repositories/files.js";
-import { findOwnParticipant } from "../../repositories/figchat.js";
+import {
+  findAgencyIdForUser,
+  findOwnParticipant,
+} from "../../repositories/figchat.js";
 import type {
   CreateFileUploadDto,
   FileResource,
@@ -77,7 +80,23 @@ async function createFigChatUploadUrl(
     return serviceFailure({ forbidden: true });
   }
 
-  const path = buildFigChatStoragePath({ conversationId, fileName });
+  const agency = await findAgencyIdForUser(supabase, userId);
+  if (agency.error) {
+    return serviceFailure({ error: agency.error });
+  }
+  if (!agency.agencyId) {
+    return serviceFailure({
+      error: new Error(
+        `FigChat upload: no agency_users row found for sender ${userId}`,
+      ),
+    });
+  }
+
+  const path = buildFigChatStoragePath({
+    agencyId: agency.agencyId,
+    conversationId,
+    fileName,
+  });
 
   const { data, error } = await createSignedUploadUrl(
     supabase,
