@@ -122,7 +122,9 @@ export async function sendFigChatMessageForUser(
     conversation_id: conversationId,
     sender_id: userId,
     agency_id: agency.agencyId,
-    content,
+    // agency_fig_chat.content is NOT NULL — an attachment-only send has no
+    // caption, so this must be "", not null. Matches web's own insert.
+    content: content ?? "",
     attachment_url: attachmentUrl,
     attachment_type: attachmentType,
     attachment_name: attachmentName,
