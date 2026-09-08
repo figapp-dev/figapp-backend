@@ -278,11 +278,65 @@ export type SubmitValidationResult =
   | { ok: false; missingFieldIds: string[] };
 
 /**
+ * Fields that become required purely from a sibling answer, independent of
+ * whatever the template's own `required` flag says — confirmed against
+ * production template data that none of these are actually marked required
+ * there (return_home_late_details / return_home_not_return_details /
+ * payment_mode / allowance_comments / allowances_details / reason_for_absence
+ * / reason_for_lateness all come back `required: false` or unset). Without
+ * this, isFieldRequired(field) alone would silently skip every one of them
+ * and submit would accept the log with them empty, even though the chat/form
+ * UI (web's collectValidationIssues.ts, Flutter's
+ * _codeLevelRequiredFieldIdsInSection) both already block submitting from
+ * the client with them empty. Mirrors those two exactly so all three stay in
+ * sync — this is the server-side backstop, not just a client nicety.
+ */
+function codeLevelRequiredFieldIds(
+  dataJson: Record<string, unknown>,
+  allFieldIds: Set<string>,
+  schoolIds: SchoolFollowUpIds,
+): Set<string> {
+  const ids = new Set<string>();
+
+  if (isLate(dataJson.return_home_status) && allFieldIds.has("return_home_late_details")) {
+    ids.add("return_home_late_details");
+  }
+  if (
+    isDidNotReturn(dataJson.return_home_status) &&
+    allFieldIds.has("return_home_not_return_details")
+  ) {
+    ids.add("return_home_not_return_details");
+  }
+
+  if (isYes(dataJson.allowances_given)) {
+    for (const id of allowanceFollowUps) {
+      if (allFieldIds.has(id)) ids.add(id);
+    }
+  }
+
+  const attended = norm(dataJson[schoolIds.attendedId]);
+  if (attended === "no" && schoolIds.absenceId) {
+    ids.add(schoolIds.absenceId);
+  }
+  if (
+    attended === "yes" &&
+    norm(dataJson[schoolIds.onTimeId]) === "no" &&
+    schoolIds.latenessId
+  ) {
+    ids.add(schoolIds.latenessId);
+  }
+
+  return ids;
+}
+
+/**
  * Submit validation matches the chat/form UI:
  * - every visible required field must be non-empty
  * - meta.role=items: only required when the group's toggle answers Yes
  * - Yes/No follow-ups (allowance amount, chores list, late details, …)
- *   are not required while their parent answer keeps them hidden
+ *   are not required while their parent answer keeps them hidden — but
+ *   *are* required once that parent answer opens them, regardless of the
+ *   template's own `required` flag (see codeLevelRequiredFieldIds)
  * - School/Education fields are not required when the child's education
  *   arrangement (16+, early years, …) disables that section — the carer is
  *   never shown those questions, so submit must not demand them either
@@ -304,6 +358,16 @@ export function validateDailyLogSubmit(
     ? schoolSectionFieldIds(templateFields)
     : null;
   const schoolFollowUpIds = resolveSchoolFollowUpIds(templateFields);
+  const allFieldIds = new Set(
+    allFields
+      .map((f) => f.id)
+      .filter((id): id is string => typeof id === "string" && id.trim().length > 0),
+  );
+  const codeRequiredIds = codeLevelRequiredFieldIds(
+    dataJson,
+    allFieldIds,
+    schoolFollowUpIds,
+  );
 
   const missingFieldIds: string[] = [];
 
@@ -327,7 +391,7 @@ export function validateDailyLogSubmit(
       continue;
     }
 
-    if (!isFieldRequired(field)) continue;
+    if (!isFieldRequired(field) && !codeRequiredIds.has(fieldId)) continue;
     if (isInactiveFollowUp(fieldId, dataJson)) continue;
     if (exemptSchoolFieldIds?.has(fieldId)) continue;
     if (isInactiveSchoolFollowUp(fieldId, dataJson, schoolFollowUpIds)) continue;
