@@ -5,6 +5,7 @@ import { childrenRoute } from "./children.js";
 import { dailyLogsRoute } from "./daily-logs.js";
 import { filesRoute } from "./files.js";
 import { figChatRoute } from "./figchat.js";
+import { lifeStoryRoute } from "./life-story.js";
 import { billingRoute } from "./billing.js";
 import { billingCollectRoute } from "./internal-billing.js";
 import { gocardlessWebhookRoute } from "./webhooks-gocardless.js";
@@ -18,5 +19,6 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(dailyLogsRoute);
   await app.register(filesRoute);
   await app.register(figChatRoute);
+  await app.register(lifeStoryRoute);
   await app.register(billingRoute);
 }

@@ -48,6 +48,7 @@ export async function filesRoute(app: FastifyInstance) {
           resource: body.resource,
           id: body.id,
           fieldId: body.fieldId,
+          section: body.section,
           fileName: body.fileName,
         },
       );

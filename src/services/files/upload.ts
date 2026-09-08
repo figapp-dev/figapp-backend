@@ -1,11 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
 import { STORAGE_BUCKETS } from "../../lib/storage.js";
+import { getActiveHouseholdIds } from "../../lib/households.js";
 import { createSignedUploadUrl } from "../../repositories/files.js";
 import {
   findAgencyIdForUser,
   findOwnParticipant,
 } from "../../repositories/figchat.js";
+import { assertChildAccessibleToCarer } from "../children/shared.js";
+import { isLifeStorySectionKey } from "../../types/life-story.js";
 import type {
   CreateFileUploadDto,
   FileResource,
@@ -14,6 +17,7 @@ import { getDailyLogAssignmentForCarer } from "./access.js";
 import {
   buildDailyLogStoragePath,
   buildFigChatStoragePath,
+  buildLifeStoryStoragePath,
   sanitizeFileName,
 } from "./paths.js";
 
@@ -122,6 +126,70 @@ async function createFigChatUploadUrl(
   });
 }
 
+async function createLifeStoryUploadUrl(
+  supabase: SupabaseClient,
+  userId: string,
+  input: { id: string; section: string; fileName: string },
+) {
+  const childId = input.id.trim();
+  const section = input.section.trim();
+  const fileName = sanitizeFileName(input.fileName);
+
+  if (!isLifeStorySectionKey(section)) {
+    return serviceFailure({ badRequest: true });
+  }
+
+  const { householdIds, error: householdError } = await getActiveHouseholdIds(
+    supabase,
+    userId,
+  );
+  if (householdError) {
+    return serviceFailure({ error: householdError });
+  }
+
+  const { allowed, error: accessError } = await assertChildAccessibleToCarer(
+    supabase,
+    childId,
+    householdIds,
+  );
+  if (accessError) {
+    return serviceFailure({ error: accessError });
+  }
+  if (!allowed) {
+    return serviceFailure({ forbidden: true });
+  }
+
+  const path = buildLifeStoryStoragePath({
+    userId,
+    childId,
+    section,
+    fileName,
+  });
+
+  const { data, error } = await createSignedUploadUrl(
+    supabase,
+    STORAGE_BUCKETS.LIFE_STORY,
+    path,
+    { upsert: true },
+  );
+
+  if (error || !data) {
+    return serviceFailure({
+      error: error ?? new Error("Failed to create signed upload URL"),
+    });
+  }
+
+  return serviceSuccess<CreateFileUploadDto>({
+    resource: "life_story",
+    id: childId,
+    bucket: STORAGE_BUCKETS.LIFE_STORY,
+    path: data.path,
+    token: data.token,
+    signedUrl: data.signedUrl,
+    fileName,
+  });
+}
+
 export async function createFileUploadUrl(
   supabase: SupabaseClient,
   userId: string,
@@ -129,6 +197,7 @@ export async function createFileUploadUrl(
     resource: FileResource | string;
     id: string;
     fieldId?: string;
+    section?: string;
     fileName: string;
   },
 ) {
@@ -155,6 +224,19 @@ export async function createFileUploadUrl(
 
   if (resource === "figchat") {
     return createFigChatUploadUrl(supabase, userId, { id, fileName: fileNameRaw });
+  }
+
+  if (resource === "life_story") {
+    const section = input.section?.trim();
+    if (!section) {
+      return serviceFailure({ badRequest: true });
+    }
+
+    return createLifeStoryUploadUrl(supabase, userId, {
+      id,
+      section,
+      fileName: fileNameRaw,
+    });
   }
 
   return serviceFailure({ unsupported: true });

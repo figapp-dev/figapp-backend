@@ -787,4 +787,47 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       attachmentSize: { type: "number", nullable: true },
     },
   });
+
+  app.addSchema({
+    $id: "LifeStoryEntryDto",
+    type: "object",
+    required: [
+      "id",
+      "section",
+      "sectionLabel",
+      "notes",
+      "mediaPath",
+      "mediaType",
+      "mediaName",
+      "createdAt",
+      "createdBy",
+    ],
+    properties: {
+      id: { type: "string" },
+      section: {
+        type: "string",
+        enum: ["leisure_fun", "academic_achievements", "other_achievements"],
+      },
+      sectionLabel: { type: "string" },
+      notes: { type: "string" },
+      mediaPath: nullableString,
+      mediaType: { type: "string", enum: ["photo", "video", "file"] },
+      mediaName: nullableString,
+      createdAt: { type: "string" },
+      createdBy: { type: "string" },
+    },
+  });
+
+  app.addSchema({
+    $id: "LifeStoryListDto",
+    type: "object",
+    required: ["childId", "entries"],
+    properties: {
+      childId: { type: "string" },
+      entries: {
+        type: "array",
+        items: { $ref: "LifeStoryEntryDto#" },
+      },
+    },
+  });
 }
