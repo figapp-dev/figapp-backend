@@ -129,4 +129,130 @@ describe("validateDailyLogSubmit", () => {
       expect(result.missingFieldIds).toEqual(["attended_on_time"]);
     }
   });
+
+  // Regression: real production templates mark every one of these
+  // conditional follow-ups `required: false` (confirmed via a live query),
+  // so isFieldRequired(field) alone let submit accept the log with them
+  // empty — even though the chat/form UI (web + Flutter) already blocked
+  // submitting from the client with them empty. These fields must become
+  // required from the sibling answer alone, matching the template shape
+  // production actually uses (required: false throughout).
+  describe("code-level-required follow-ups (template does not mark them required)", () => {
+    const evening = [
+      {
+        id: "evening",
+        title: "Evening, household tasks & mood",
+        fields: [
+          { id: "return_home_status", required: false },
+          { id: "return_home_late_details", required: false },
+          { id: "return_home_not_return_details", required: false },
+          { id: "allowances_given", required: false },
+          { id: "allowance_amount", required: false },
+          { id: "payment_mode", required: false },
+          { id: "allowance_comments", required: false },
+          { id: "allowances_details", required: false },
+        ],
+      },
+    ];
+
+    it("requires 'no return details' once return_home_status is 'Did not return'", () => {
+      const result = validateDailyLogSubmit(
+        { return_home_status: "Did not return" },
+        evening,
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.missingFieldIds).toEqual([
+          "return_home_not_return_details",
+        ]);
+      }
+    });
+
+    it("requires 'return home late details' once return_home_status is late", () => {
+      const result = validateDailyLogSubmit(
+        { return_home_status: "Returned late" },
+        evening,
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.missingFieldIds).toEqual(["return_home_late_details"]);
+      }
+    });
+
+    it("does not require return-home follow-ups when the child returned on time", () => {
+      expect(
+        validateDailyLogSubmit(
+          { return_home_status: "Returned by acceptable time" },
+          evening,
+        ),
+      ).toEqual({ ok: true });
+    });
+
+    it("requires every visible allowance follow-up once allowances_given is Yes, even though none are template-required", () => {
+      const result = validateDailyLogSubmit(
+        { allowances_given: "Yes" },
+        evening,
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(new Set(result.missingFieldIds)).toEqual(
+          new Set([
+            "allowance_amount",
+            "payment_mode",
+            "allowance_comments",
+            "allowances_details",
+          ]),
+        );
+      }
+    });
+
+    it("does not require allowance follow-ups when allowances_given is No", () => {
+      expect(
+        validateDailyLogSubmit({ allowances_given: "No" }, evening),
+      ).toEqual({ ok: true });
+    });
+  });
+
+  it("requires reason for absence once attended=No even when the template does not mark it required", () => {
+    const schoolNotRequired = [
+      {
+        id: "school",
+        title: "School / Education",
+        fields: [
+          { id: "attended_school", label: "Attended school", required: false },
+          { id: "reason_for_absence", label: "Reason for absence", required: false },
+        ],
+      },
+    ];
+    const result = validateDailyLogSubmit(
+      { attended_school: "No" },
+      schoolNotRequired,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.missingFieldIds).toEqual(["reason_for_absence"]);
+    }
+  });
+
+  it("requires reason for lateness once attended=Yes and on-time=No, template-required or not", () => {
+    const schoolNotRequired = [
+      {
+        id: "school",
+        title: "School / Education",
+        fields: [
+          { id: "attended_school", label: "Attended school", required: false },
+          { id: "attended_on_time", label: "Attended on time", required: false },
+          { id: "reason_for_lateness", label: "Reason for lateness", required: false },
+        ],
+      },
+    ];
+    const result = validateDailyLogSubmit(
+      { attended_school: "Yes", attended_on_time: "No" },
+      schoolNotRequired,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.missingFieldIds).toEqual(["reason_for_lateness"]);
+    }
+  });
 });
