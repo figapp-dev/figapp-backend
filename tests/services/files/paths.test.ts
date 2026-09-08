@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   buildFigChatStoragePath,
+  buildLifeStoryStoragePath,
   dailyLogAssignmentIdFromPath,
   dailyLogStorageSubjectId,
   extensionFromFileName,
   figChatConversationIdFromPath,
+  lifeStoryChildIdFromPath,
   sanitizeFileName,
 } from "../../../src/services/files/paths.js";
 
@@ -63,6 +65,31 @@ describe("buildFigChatStoragePath / figChatConversationIdFromPath", () => {
       fileName: "photo.png",
     });
     expect(figChatConversationIdFromPath(path)).not.toBe("conv-2");
+  });
+});
+
+describe("buildLifeStoryStoragePath / lifeStoryChildIdFromPath", () => {
+  it("matches the life_story bucket's RLS-required shape (own uid first) and round-trips the child id back out", () => {
+    const path = buildLifeStoryStoragePath({
+      userId: "user-1",
+      childId: "child-1",
+      section: "leisure_fun",
+      fileName: "photo.png",
+    });
+    expect(path).toMatch(
+      /^user-1\/children\/child-1\/leisure_fun\/[^/]+\.png$/,
+    );
+    expect(lifeStoryChildIdFromPath(path)).toBe("child-1");
+  });
+
+  it("rejects a path scoped to a different child", () => {
+    const path = buildLifeStoryStoragePath({
+      userId: "user-1",
+      childId: "child-1",
+      section: "leisure_fun",
+      fileName: "photo.png",
+    });
+    expect(lifeStoryChildIdFromPath(path)).not.toBe("child-2");
   });
 });
 

@@ -54,6 +54,13 @@ export const ErrorMessages = {
     "Only an agency admin can post in this broadcast conversation.",
   FIGCHAT_MARK_READ_FAILED: "Failed to mark conversation as read",
 
+  LIFE_STORY_LOAD_FAILED: "Failed to load life story",
+  LIFE_STORY_ADD_FAILED: "Failed to add life story entry",
+  LIFE_STORY_INVALID_BODY:
+    "section and media (path, name) are required",
+  LIFE_STORY_ACCESS_DENIED:
+    "This child is not currently placed with your household",
+
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",

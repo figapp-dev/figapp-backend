@@ -76,3 +76,33 @@ export function figChatConversationIdFromPath(path: string): string | null {
   const parts = path.split("/").filter(Boolean);
   return parts[3] ?? null;
 }
+
+/**
+ * Path shape: `{userId}/children/{childId}/{section}/{uuid}.ext` — must
+ * start with the uploader's own auth uid and have 'children' as the second
+ * segment. The 'life_story' storage bucket's RLS policies
+ * (life_story_insert_own_folder / _update_own_folder / _delete_own_folder)
+ * require foldername(name)[1] = auth.uid()::text; the SELECT policy
+ * additionally allows foldername(name)[2] = 'children' with an
+ * agency/children join, matching this shape. Anything else fails with an
+ * opaque "new row violates row-level security policy" on the storage
+ * insert. Matches web's own addLeisurePhotosFromDailyLog.ts, since this
+ * bucket and the children.life_story_data column are shared with web.
+ */
+export function buildLifeStoryStoragePath(options: {
+  userId: string;
+  childId: string;
+  section: string;
+  fileName: string;
+}): string {
+  const ext = extensionFromFileName(options.fileName);
+  return `${options.userId}/children/${options.childId}/${options.section}/${randomUUID()}.${ext}`;
+}
+
+/** The child id segment of a buildLifeStoryStoragePath() path — used to
+ * confirm a media path belongs to the child an entry is being added for,
+ * before accepting it into children.life_story_data. */
+export function lifeStoryChildIdFromPath(path: string): string | null {
+  const parts = path.split("/").filter(Boolean);
+  return parts[2] ?? null;
+}

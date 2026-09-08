@@ -3,15 +3,19 @@
  * `id` meaning changes per resource:
  * - daily_log → same id as GET /daily-logs/:id (assignment id)
  * - figchat → conversation id
- * - (later) life_story → child id, document → document id, etc.
+ * - life_story → child id (same as GET /children/:id)
+ * - (later) document → document id, etc.
  */
-export type FileResource = "daily_log" | "figchat";
+export type FileResource = "daily_log" | "figchat" | "life_story";
 
 export type CreateFileUploadBody = {
   resource: FileResource;
   id: string;
-  /** Template field / question id — required for daily_log, unused for figchat. */
+  /** Template field / question id — required for daily_log, unused otherwise. */
   fieldId?: string;
+  /** Life Story section key ("leisure_fun" | "academic_achievements" |
+   * "other_achievements") — required for life_story, unused otherwise. */
+  section?: string;
   fileName: string;
 };
 
