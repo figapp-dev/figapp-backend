@@ -182,6 +182,54 @@ function asMoodSelection(value: unknown): string[] {
   return [];
 }
 
+/** Same required-field-per-row rules as web's collectValidationIssues.ts
+ * validateRepeatableGroup / rowInvalid checks (comments is only required
+ * for medications, matching repeatableChatSteps.ts's
+ * isRepeatableFieldRequired on both web and Flutter). */
+const ROW_REQUIRED_FIELDS: Record<string, readonly string[]> = {
+  appointments: ["type", "time"],
+  medications: ["time", "medication", "dose", "comments"],
+  contacts: ["contact_type", "mode", "time", "who_with"],
+};
+
+function isRowMissingFields(row: unknown, requiredKeys: readonly string[]): boolean {
+  if (!row || typeof row !== "object") return true;
+  const record = row as Record<string, unknown>;
+  return requiredKeys.some((key) => !String(record[key] ?? "").trim());
+}
+
+/** Same key as web's chat/constants.ts INCIDENTS_ARRAY_KEY / Flutter's
+ * isIncidentItemsField — incidents don't use the meta.role="items" /
+ * meta.group tagging appointments/medications/contacts do (confirmed
+ * against production template data: the "incidents" toggle field has no
+ * meta.group at all), so this array key is synthetic/hardcoded on both
+ * clients rather than resolved from the template, and is mirrored here the
+ * same way. */
+const INCIDENTS_ARRAY_KEY = "incident_items";
+const INCIDENT_ROW_REQUIRED_FIELDS = ["type", "time", "details", "status"] as const;
+
+function isIncidentsFinalCommentsSectionTitle(title: unknown): boolean {
+  const t = norm(title);
+  return t.includes("incidents") && t.includes("final");
+}
+
+/** The "Incidents" toggle field id, resolved the same fuzzy way web's
+ * findFieldId(incidentFields, "incidents") does, scoped to the
+ * Incidents/final-comments section only (avoids matching an unrelated
+ * field elsewhere whose id/label happens to contain "incidents"). */
+function resolveIncidentsToggleId(templateFields: unknown): string | undefined {
+  if (!Array.isArray(templateFields)) return undefined;
+  for (const section of templateFields) {
+    if (!section || typeof section !== "object") continue;
+    const { title, fields } = section as { title?: unknown; fields?: unknown };
+    if (!isIncidentsFinalCommentsSectionTitle(title) || !Array.isArray(fields)) {
+      continue;
+    }
+    return findFieldId(fields as TemplateFieldLike[], "incidents");
+  }
+  return undefined;
+}
+
 const MOOD_FIELD_ID = "mood_of_the_day";
 const MOOD_COMMENTS_FIELD_ID = "mood_comments";
 const MOOD_OTHER_OPTION = "Other (Please Describe in the Comment Box below)";
@@ -385,7 +433,19 @@ export function validateDailyLogSubmit(
       const toggleVal = toggle?.id != null ? dataJson[toggle.id] : undefined;
       if (!isYes(toggleVal)) continue;
 
-      if (isValueEmpty(dataJson[fieldId])) {
+      const rows = Array.isArray(dataJson[fieldId]) ? dataJson[fieldId] : [];
+      const requiredRowFields = ROW_REQUIRED_FIELDS[group];
+      // Web additionally requires every row to have its own required
+      // sub-fields filled (e.g. an appointment needs both a type and a
+      // time, not just "an appointment exists") — matches
+      // validateRepeatableGroup's rowInvalid checks. Previously only the
+      // array-non-empty case below was checked, so a row with an empty
+      // type/time could be submitted from mobile even though web blocks it.
+      const hasIncompleteRow =
+        requiredRowFields != null &&
+        (rows as unknown[]).some((row) => isRowMissingFields(row, requiredRowFields));
+
+      if (isValueEmpty(dataJson[fieldId]) || hasIncompleteRow) {
         missingFieldIds.push(fieldId);
       }
       continue;
@@ -410,6 +470,29 @@ export function validateDailyLogSubmit(
     !missingFieldIds.includes(MOOD_COMMENTS_FIELD_ID)
   ) {
     missingFieldIds.push(MOOD_COMMENTS_FIELD_ID);
+  }
+
+  // Incidents have no meta.role="items" tagging in the template (confirmed
+  // against production data), so they're entirely invisible to the loop
+  // above — this was a real gap: with the toggle answered "Yes", mobile
+  // could submit with zero incident rows, or a row missing its
+  // type/time/details/status, neither of which web or Flutter's own client
+  // validation allow. Matches collectValidationIssues.ts's dedicated
+  // incidents block.
+  const incidentsToggleId = resolveIncidentsToggleId(templateFields);
+  if (incidentsToggleId && isYes(dataJson[incidentsToggleId])) {
+    const incidentRows = Array.isArray(dataJson[INCIDENTS_ARRAY_KEY])
+      ? (dataJson[INCIDENTS_ARRAY_KEY] as unknown[])
+      : [];
+    const hasIncompleteIncident = incidentRows.some((row) =>
+      isRowMissingFields(row, INCIDENT_ROW_REQUIRED_FIELDS),
+    );
+    if (
+      (incidentRows.length === 0 || hasIncompleteIncident) &&
+      !missingFieldIds.includes(INCIDENTS_ARRAY_KEY)
+    ) {
+      missingFieldIds.push(INCIDENTS_ARRAY_KEY);
+    }
   }
 
   if (missingFieldIds.length === 0) return { ok: true };
