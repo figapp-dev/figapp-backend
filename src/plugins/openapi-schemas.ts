@@ -830,4 +830,202 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       },
     },
   });
+
+  const eventTypeEnum = [
+    "meeting",
+    "visit",
+    "appointment",
+    "training",
+    "court",
+    "activity",
+    "other",
+  ];
+
+  app.addSchema({
+    $id: "CalendarParticipantSummaryDto",
+    type: "object",
+    required: ["total", "accepted", "pending", "declined", "tentative"],
+    properties: {
+      total: { type: "integer" },
+      accepted: { type: "integer" },
+      pending: { type: "integer" },
+      declined: { type: "integer" },
+      tentative: { type: "integer" },
+    },
+  });
+
+  app.addSchema({
+    $id: "CalendarEventParticipantDto",
+    type: "object",
+    required: ["id", "userId", "status", "role", "isAdmin"],
+    properties: {
+      id: { type: "string" },
+      userId: { type: "string" },
+      status: {
+        type: "string",
+        enum: ["pending", "accepted", "declined", "tentative"],
+      },
+      role: { type: "string", enum: ["organizer", "attendee", "optional"] },
+      responseAt: nullableString,
+      notes: nullableString,
+      isAdmin: { type: "boolean" },
+      displayName: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "CalendarEventReminderDto",
+    type: "object",
+    required: ["id", "offsetNumber", "offsetUnit"],
+    properties: {
+      id: { type: "string" },
+      offsetNumber: { type: "integer" },
+      offsetUnit: { type: "string", enum: ["minutes", "hours", "days"] },
+      label: nullableString,
+    },
+  });
+
+  const recurrenceEndDto = {
+    type: "object",
+    required: ["type"],
+    properties: {
+      type: { type: "string", enum: ["never", "after", "until"] },
+      count: { type: "integer" },
+      until: { type: "string" },
+    },
+  } as const;
+
+  const recurrencePatternDto = {
+    type: "object",
+    nullable: true,
+    required: ["repeat"],
+    properties: {
+      repeat: {
+        type: "object",
+        required: ["every", "unit", "end"],
+        properties: {
+          every: { type: "integer" },
+          unit: { type: "string", enum: ["days", "weeks", "months", "years"] },
+          end: recurrenceEndDto,
+        },
+      },
+    },
+  } as const;
+
+  const calendarEventListItemProperties = {
+    id: { type: "string" },
+    title: { type: "string" },
+    eventType: { type: "string", enum: eventTypeEnum },
+    startDatetime: { type: "string" },
+    endDatetime: { type: "string" },
+    location: nullableString,
+    isRecurring: { type: "boolean" },
+    seriesId: nullableString,
+    occurrenceIndex: { type: "integer" },
+    taggedChildIds: { type: "array", items: { type: "string" } },
+    createdBy: nullableString,
+    isOwnEvent: { type: "boolean" },
+    participantSummary: { $ref: "CalendarParticipantSummaryDto#" },
+  } as const;
+
+  const calendarEventListItemRequired = [
+    "id",
+    "title",
+    "eventType",
+    "startDatetime",
+    "endDatetime",
+    "location",
+    "isRecurring",
+    "seriesId",
+    "occurrenceIndex",
+    "taggedChildIds",
+    "createdBy",
+    "isOwnEvent",
+    "participantSummary",
+  ];
+
+  app.addSchema({
+    $id: "CalendarEventListItemDto",
+    type: "object",
+    required: calendarEventListItemRequired,
+    properties: calendarEventListItemProperties,
+  });
+
+  app.addSchema({
+    $id: "CalendarEventDetailDto",
+    type: "object",
+    required: [
+      ...calendarEventListItemRequired,
+      "description",
+      "recurrencePattern",
+      "isSeriesException",
+      "participants",
+      "reminders",
+      "canEdit",
+      "canDelete",
+    ],
+    properties: {
+      ...calendarEventListItemProperties,
+      description: nullableString,
+      recurrencePattern: recurrencePatternDto,
+      isSeriesException: { type: "boolean" },
+      participants: {
+        type: "array",
+        items: { $ref: "CalendarEventParticipantDto#" },
+      },
+      reminders: {
+        type: "array",
+        items: { $ref: "CalendarEventReminderDto#" },
+      },
+      canEdit: { type: "boolean" },
+      canDelete: { type: "boolean" },
+    },
+  });
+
+  app.addSchema({
+    $id: "CalendarEventListDto",
+    type: "object",
+    required: ["events"],
+    properties: {
+      events: { type: "array", items: { $ref: "CalendarEventListItemDto#" } },
+    },
+  });
+
+  app.addSchema({
+    $id: "CalendarEligibleChildDto",
+    type: "object",
+    required: ["id", "displayName"],
+    properties: {
+      id: { type: "string" },
+      displayName: { type: "string" },
+    },
+  });
+
+  app.addSchema({
+    $id: "CalendarEligibleUserDto",
+    type: "object",
+    required: ["userId", "displayName", "role"],
+    properties: {
+      userId: { type: "string" },
+      displayName: { type: "string" },
+      role: { type: "string" },
+    },
+  });
+
+  app.addSchema({
+    $id: "CalendarEligibleParticipantsDto",
+    type: "object",
+    required: ["children", "linkedCarers", "socialWorkers"],
+    properties: {
+      children: { type: "array", items: { $ref: "CalendarEligibleChildDto#" } },
+      linkedCarers: {
+        type: "array",
+        items: { $ref: "CalendarEligibleUserDto#" },
+      },
+      socialWorkers: {
+        type: "array",
+        items: { $ref: "CalendarEligibleUserDto#" },
+      },
+    },
+  });
 }
