@@ -3,7 +3,10 @@ import {
   findOwnAgencyId,
   listAgencyUsersByIds,
 } from "../../repositories/calendar.js";
-import type { EventParticipantRow } from "../../types/calendar.js";
+import type {
+  EventParticipantRow,
+  ParticipantProfile,
+} from "../../types/calendar.js";
 
 export async function getOwnAgencyId(
   supabase: SupabaseClient,
@@ -14,21 +17,28 @@ export async function getOwnAgencyId(
   return { agencyId: data, error: null };
 }
 
-/** Resolves participant display names in one batch query. */
-export async function buildParticipantNameMap(
+/** Resolves participant display name + FigApp ID + agency role (e.g.
+ * "social_worker") in one batch query — the agency role is distinct from
+ * `EventParticipantRow.role` (organizer/attendee/optional), which is the
+ * calendar-specific role. */
+export async function buildParticipantProfileMap(
   supabase: SupabaseClient,
   participants: EventParticipantRow[],
-): Promise<{ data: Map<string, string>; error: Error | null }> {
+): Promise<{ data: Map<string, ParticipantProfile>; error: Error | null }> {
   const userIds = [...new Set(participants.map((p) => p.user_id))];
   const { data, error } = await listAgencyUsersByIds(supabase, userIds);
   if (error) return { data: new Map(), error };
 
-  const map = new Map<string, string>();
+  const map = new Map<string, ParticipantProfile>();
   for (const user of data) {
     const name =
       [user.first_name, user.last_name].filter(Boolean).join(" ").trim() ||
       "Unnamed user";
-    map.set(user.user_id, name);
+    map.set(user.user_id, {
+      displayName: name,
+      figappId: user.figapp_id,
+      profileRole: user.role,
+    });
   }
   return { data: map, error: null };
 }

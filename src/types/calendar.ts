@@ -76,6 +76,17 @@ export type EventParticipantDto = {
   notes: string | null;
   isAdmin: boolean;
   displayName: string | null;
+  figappId: string | null;
+  /** The person's agency role (e.g. "social_worker", "sw_manager",
+   * "foster_carer") — distinct from `role` above, which is their
+   * calendar-participation role (organizer/attendee/optional). */
+  profileRole: string | null;
+};
+
+export type ParticipantProfile = {
+  displayName: string;
+  figappId: string | null;
+  profileRole: string | null;
 };
 
 export type EventReminderDto = {
@@ -126,12 +137,14 @@ export type EventListDto = {
 export type EligibleChildDto = {
   id: string;
   displayName: string;
+  figappId: string | null;
 };
 
 export type EligibleUserDto = {
   userId: string;
   displayName: string;
   role: string;
+  figappId: string | null;
 };
 
 export type EligibleParticipantsDto = {
