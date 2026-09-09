@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TABLES } from "../lib/tables.js";
 import type {
+  ChildPlacementRow,
+  ParentPlacementRow,
+} from "../lib/daily-log-placements.js";
+import type {
   DailyLogAssignmentDetailRow,
   DailyLogAssignmentListRow,
 } from "../types/daily-logs.js";
@@ -176,6 +180,40 @@ export async function listIncompleteAssignmentsInRange(
     data: (data ?? []) as DailyLogAssignmentListRow[],
     error: null,
   };
+}
+
+/** Child placement rows for filterAssignmentsToActivePlacements. */
+export async function fetchChildPlacementsForHouseholds(
+  supabase: SupabaseClient,
+  householdIds: string[],
+): Promise<{ data: ChildPlacementRow[]; error: Error | null }> {
+  if (householdIds.length === 0) return { data: [], error: null };
+
+  const { data, error } = await supabase
+    .from(TABLES.HOUSEHOLD_CHILDREN)
+    .select("child_id, household_id, is_active, start_date, end_date")
+    .in("household_id", householdIds);
+
+  if (error) return { data: [], error };
+  return { data: (data ?? []) as ChildPlacementRow[], error: null };
+}
+
+/** Placed biological parent placement rows for filterAssignmentsToActivePlacements. */
+export async function fetchParentPlacementsForHouseholds(
+  supabase: SupabaseClient,
+  householdIds: string[],
+): Promise<{ data: ParentPlacementRow[]; error: Error | null }> {
+  if (householdIds.length === 0) return { data: [], error: null };
+
+  const { data, error } = await supabase
+    .from(TABLES.BIOLOGICAL_PARENT_PLACEMENTS)
+    .select(
+      "child_id, household_id, biological_parent_id, is_active, start_date, end_date",
+    )
+    .in("household_id", householdIds);
+
+  if (error) return { data: [], error };
+  return { data: (data ?? []) as ParentPlacementRow[], error: null };
 }
 
 /** Lean assignment row for access checks (e.g. file upload). */
