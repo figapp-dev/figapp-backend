@@ -255,4 +255,161 @@ describe("validateDailyLogSubmit", () => {
       expect(result.missingFieldIds).toEqual(["reason_for_lateness"]);
     }
   });
+
+  describe("repeatable row completeness (appointments/medications/contacts)", () => {
+    const apptTemplate = [
+      {
+        id: "appt",
+        fields: [
+          {
+            id: "has_appts",
+            required: true,
+            meta: { group: "appointments", role: "toggle" },
+          },
+          {
+            id: "appt_items",
+            required: false,
+            meta: { group: "appointments", role: "items" },
+          },
+        ],
+      },
+    ];
+
+    it("requires every row to have both a type and a time, not just a non-empty array", () => {
+      const result = validateDailyLogSubmit(
+        {
+          has_appts: "Yes",
+          appt_items: [{ id: "a1", type: "", time: "10:00", comments: "" }],
+        },
+        apptTemplate,
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.missingFieldIds).toEqual(["appt_items"]);
+      }
+    });
+
+    it("passes once every row has its required fields", () => {
+      expect(
+        validateDailyLogSubmit(
+          {
+            has_appts: "Yes",
+            appt_items: [
+              { id: "a1", type: "Dentist", time: "10:00", comments: "" },
+            ],
+          },
+          apptTemplate,
+        ),
+      ).toEqual({ ok: true });
+    });
+
+    const medsTemplate = [
+      {
+        id: "meds",
+        fields: [
+          {
+            id: "has_meds",
+            required: true,
+            meta: { group: "medications", role: "toggle" },
+          },
+          {
+            id: "meds_items",
+            required: false,
+            meta: { group: "medications", role: "items" },
+          },
+        ],
+      },
+    ];
+
+    it("requires medication rows to include comments too (only group where comments is mandatory)", () => {
+      const result = validateDailyLogSubmit(
+        {
+          has_meds: "Yes",
+          meds_items: [
+            {
+              id: "m1",
+              time: "08:00",
+              medication: "Paracetamol",
+              dose: "5ml",
+              comments: "",
+            },
+          ],
+        },
+        medsTemplate,
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.missingFieldIds).toEqual(["meds_items"]);
+      }
+    });
+  });
+
+  describe("incidents completeness (no meta.role tagging in the real template)", () => {
+    const incidentsTemplate = [
+      {
+        id: "incidents",
+        title: "Incidents & final comments",
+        fields: [{ id: "incidents", label: "Incidents", required: true }],
+      },
+    ];
+
+    it("requires at least one incident row once the toggle is Yes", () => {
+      const result = validateDailyLogSubmit(
+        { incidents: "Yes" },
+        incidentsTemplate,
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.missingFieldIds).toEqual(["incident_items"]);
+      }
+    });
+
+    it("requires every incident row to have type, time, details, and status", () => {
+      const result = validateDailyLogSubmit(
+        {
+          incidents: "Yes",
+          incident_items: [
+            {
+              id: "i1",
+              type: "Missing",
+              time: "14:00",
+              details: "",
+              status: "Reported",
+            },
+          ],
+        },
+        incidentsTemplate,
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.missingFieldIds).toEqual(["incident_items"]);
+      }
+    });
+
+    it("passes once every incident row is complete", () => {
+      expect(
+        validateDailyLogSubmit(
+          {
+            incidents: "Yes",
+            incident_items: [
+              {
+                id: "i1",
+                type: "Missing",
+                time: "14:00",
+                details: "Left the house unsupervised",
+                status: "Reported",
+              },
+            ],
+          },
+          incidentsTemplate,
+        ),
+      ).toEqual({ ok: true });
+    });
+
+    it("does not require any incident rows when the toggle is No", () => {
+      expect(
+        validateDailyLogSubmit({ incidents: "No" }, incidentsTemplate),
+      ).toEqual({ ok: true });
+    });
+  });
 });
