@@ -241,6 +241,48 @@ export async function deleteRemindersForEvents(
   return { error };
 }
 
+/** The carer's own assigned social worker. `agency_users.social_worker_id`
+ * is the "Link Households" source of truth — NOT `household_carers.social_worker_id`,
+ * which nothing ever writes and is only a legacy fallback (mirrors the
+ * priority in figapp-new's HouseholdProfileDialog.tsx). */
+export async function findOwnSocialWorkerId(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ data: string | null; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.AGENCY_USERS)
+    .select("social_worker_id")
+    .eq("user_id", userId)
+    .eq("is_archived", false)
+    .maybeSingle();
+
+  if (error) return { data: null, error };
+  return {
+    data: (data as { social_worker_id: string | null } | null)?.social_worker_id ?? null,
+    error: null,
+  };
+}
+
+/** A user's manager (used to find a social worker's SW manager — a second
+ * hop, not a separate household assignment). */
+export async function findManagerId(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ data: string | null; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.AGENCY_USERS)
+    .select("manager_id")
+    .eq("user_id", userId)
+    .eq("is_archived", false)
+    .maybeSingle();
+
+  if (error) return { data: null, error };
+  return {
+    data: (data as { manager_id: string | null } | null)?.manager_id ?? null,
+    error: null,
+  };
+}
+
 export async function findOwnAgencyId(
   supabase: SupabaseClient,
   userId: string,

@@ -3,7 +3,9 @@ import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
 import { toEligibleChildDto, toEligibleUserDto } from "../../mappers/calendar.js";
 import { listChildrenByIds } from "../../repositories/children.js";
 import {
+  findManagerId,
   findOwnAgencyId,
+  findOwnSocialWorkerId,
   listAgencyUsersByRole,
   listHouseholdCarerLinksForUser,
   listOtherActiveHouseholdCarerUserIds,
@@ -24,12 +26,19 @@ const EMPTY: EligibleParticipantsDto = {
 
 /** Who a foster carer can tag/invite when creating an event — mirrors
  * fetchUsersAndChildren's `isFosterCarer` branch in
- * figapp-new/modules/events/components/AddEventDialog.tsx:
+ * figapp-new/modules/events/components/AddEventDialog.tsx, corrected to use
+ * the actual source of truth for a carer's social worker:
  *   - children: placed with the carer's active household(s) (tag only,
  *     not invited as event_participants)
  *   - linkedCarers: other active carers in the same household(s)
- *   - socialWorkers: the household's assigned social worker(s) plus each
- *     placed child's own social_worker_id */
+ *   - socialWorkers: the carer's own assigned social worker
+ *     (`agency_users.social_worker_id` — set by "Link Households"; NOT
+ *     `household_carers.social_worker_id`, which nothing ever writes) plus
+ *     that social worker's own manager (SW manager), plus each placed
+ *     child's own `social_worker_id`. See
+ *     figapp-new/src/components/HouseholdProfileDialog.tsx for the same
+ *     priority (agency_users.social_worker_id first, household_carers
+ *     value only as a legacy fallback). */
 export async function getEligibleParticipantsForCarer(
   supabase: SupabaseClient,
   userId: string,
@@ -42,7 +51,9 @@ export async function getEligibleParticipantsForCarer(
   if (links.length === 0) return serviceSuccess(EMPTY);
 
   const householdIds = [...new Set(links.map((l) => l.household_id))];
-  const swIdsFromHousehold = links
+  // Legacy fallback only — nothing writes household_carers.social_worker_id
+  // in practice, but keep it as a safety net matching web's own fallback.
+  const legacySwIdsFromHousehold = links
     .map((l) => l.social_worker_id)
     .filter((id): id is string => Boolean(id));
 
@@ -52,13 +63,19 @@ export async function getEligibleParticipantsForCarer(
   );
   if (placementsError) return serviceFailure({ error: placementsError });
 
-  const [childrenResult, swFromChildrenResult, otherCarersResult, agencyIdResult] =
-    await Promise.all([
-      listChildrenByIds(supabase, placements.childIds),
-      listSocialWorkerIdsForChildren(supabase, placements.childIds),
-      listOtherActiveHouseholdCarerUserIds(supabase, householdIds, userId),
-      findOwnAgencyId(supabase, userId),
-    ]);
+  const [
+    childrenResult,
+    swFromChildrenResult,
+    otherCarersResult,
+    agencyIdResult,
+    ownSocialWorkerResult,
+  ] = await Promise.all([
+    listChildrenByIds(supabase, placements.childIds),
+    listSocialWorkerIdsForChildren(supabase, placements.childIds),
+    listOtherActiveHouseholdCarerUserIds(supabase, householdIds, userId),
+    findOwnAgencyId(supabase, userId),
+    findOwnSocialWorkerId(supabase, userId),
+  ]);
 
   if (childrenResult.error) return serviceFailure({ error: childrenResult.error });
   if (swFromChildrenResult.error) {
@@ -66,6 +83,9 @@ export async function getEligibleParticipantsForCarer(
   }
   if (otherCarersResult.error) return serviceFailure({ error: otherCarersResult.error });
   if (agencyIdResult.error) return serviceFailure({ error: agencyIdResult.error });
+  if (ownSocialWorkerResult.error) {
+    return serviceFailure({ error: ownSocialWorkerResult.error });
+  }
 
   const agencyId = agencyIdResult.data;
   const children = childrenResult.data.map(toEligibleChildDto);
@@ -74,8 +94,19 @@ export async function getEligibleParticipantsForCarer(
     return serviceSuccess({ ...EMPTY, children });
   }
 
+  const ownSocialWorkerId = ownSocialWorkerResult.data ?? legacySwIdsFromHousehold[0] ?? null;
+  const managerResult = ownSocialWorkerId
+    ? await findManagerId(supabase, ownSocialWorkerId)
+    : { data: null, error: null };
+  if (managerResult.error) return serviceFailure({ error: managerResult.error });
+
   const socialWorkerIds = [
-    ...new Set([...swIdsFromHousehold, ...swFromChildrenResult.data]),
+    ...new Set([
+      ...(ownSocialWorkerId ? [ownSocialWorkerId] : []),
+      ...(managerResult.data ? [managerResult.data] : []),
+      ...legacySwIdsFromHousehold,
+      ...swFromChildrenResult.data,
+    ]),
   ];
 
   const [linkedCarersResult, socialWorkersResult] = await Promise.all([
