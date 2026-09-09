@@ -61,6 +61,24 @@ export const ErrorMessages = {
   LIFE_STORY_ACCESS_DENIED:
     "This child is not currently placed with your household",
 
+  CALENDAR_EVENTS_LOAD_FAILED: "Failed to load calendar events",
+  CALENDAR_EVENT_NOT_FOUND: "Event not found",
+  CALENDAR_EVENT_LOAD_FAILED: "Failed to load event",
+  CALENDAR_EVENT_SAVE_FAILED: "Failed to save event",
+  CALENDAR_EVENT_DELETE_FAILED: "Failed to delete event",
+  CALENDAR_EVENT_INVALID_BODY:
+    "title, eventType, startDatetime and endDatetime are required, and endDatetime must be after startDatetime",
+  CALENDAR_EVENT_INVALID_RECURRENCE:
+    "recurrencePattern is invalid, or its 'until' date is before startDatetime",
+  CALENDAR_EVENT_INVALID_QUERY: "from and to must both be YYYY-MM-DD",
+  CALENDAR_EVENT_ACCESS_DENIED:
+    "Only the event's creator or an event admin can make this change",
+  CALENDAR_NO_AGENCY: "You must belong to an agency to create events",
+  CALENDAR_RSVP_FAILED: "Failed to update your RSVP",
+  CALENDAR_RSVP_NOT_INVITED: "You are not a participant on this event",
+  CALENDAR_ELIGIBLE_PARTICIPANTS_LOAD_FAILED:
+    "Failed to load who you can invite",
+
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",

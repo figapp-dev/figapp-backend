@@ -138,7 +138,7 @@ This mirrors the pattern already verified correct in the web app's Edge Function
 4. Daily Logs (core MVP): `GET /daily-logs`, `GET/PUT /daily-logs/:id` (`:id` = **assignment id**). Templates embed on detail (no standalone templates route). Web creates today’s assignments; mobile only reads/writes. Offline: `clientLogId` on first create, `log.updatedAt` / `expectedUpdatedAt` for conflicts — **done**
 5. File uploads: `POST /files/signed-upload-url` + `POST /files/signed-url` — **done**
 6. `POST /fcm/register` for push notifications
-7. Then FigChat send + Tasks + Expenses (Phase 2), then Calendar + Documents + Profile endpoints (Phase 3) — one resource at a time, matching Flutter's build order so neither side races ahead.
+7. FigChat send — **done**. Calendar (`/calendar/events`, `/calendar/eligible-participants`) — **done**, full web parity (recurrence, reminders, participant invites, RSVP, edit-scope). Note: "Tasks" (`TaskManagement.tsx` on web) is `super_admin`/`app_admin`-only and is **not** a foster_carer feature — don't build a `/tasks` endpoint for this app. Remaining, in the web sidebar's foster_carer order: Documents, My Household, Life Story, My Placements, Platform Support (tickets), Survey Center, Expense Claims, Notifications (deliberately last) — one resource at a time, matching Flutter's build order so neither side races ahead.
 
 ## Shipped endpoints (foster_carer MVP so far)
 
@@ -153,6 +153,13 @@ Auth: Supabase Auth on the client; send `Authorization: Bearer <access_token>`. 
 - `GET /daily-logs/:id` — assignment detail (template + `dataJson` + contributors)
 - `PUT /daily-logs/:id` — save/submit (see Flutter contract below)
 - `POST /files/signed-upload-url`, `POST /files/signed-url`
+- `GET /calendar/events?from=YYYY-MM-DD&to=YYYY-MM-DD` — events the caller created or is a participant in (default: current UK month). RLS (`events_select_participants_only`) does the access filtering.
+- `GET /calendar/eligible-participants` — who the caller can tag/invite: placed children (tag-only), linked foster carers, social workers
+- `GET /calendar/events/:id` — detail incl. participants + reminders
+- `POST /calendar/events` — create; a `recurrencePattern` is expanded server-side into individual occurrence rows immediately (capped at 52), sharing a `seriesId`
+- `PUT /calendar/events/:id` — update; body `editScope` (`single` default | `future` | `series`) controls how a recurring series is affected, mirroring the web app's edit dialog (delta-shift start/end across target rows, full replace of reminders, add/remove diff of participants)
+- `DELETE /calendar/events/:id` — deletes a single occurrence, not the whole series
+- `POST /calendar/events/:id/rsvp` — accept/decline/tentative on the caller's own invite
 
 ## Flutter contract (daily logs + files)
 
@@ -167,8 +174,8 @@ Auth: Supabase Auth on the client; send `Authorization: Bearer <access_token>`. 
 ## Planned endpoints (not built yet)
 
 - `POST /fcm/register`
-- FigChat, notifications, expenses, tasks, calendar, documents
-- `GET/PUT /profile` extras (`/profile/carer-details`), household, life-story, GDPR, tickets
+- FigChat, notifications, expenses, documents
+- `GET/PUT /profile` extras (`/profile/carer-details`), household, GDPR, tickets
 - Web still owns assignment creation; do not add “ensure today” unless product asks
 
 ## Full product endpoint list (target scope, foster_carer)
@@ -181,8 +188,7 @@ Auth: Supabase Auth on the client; send `Authorization: Bearer <access_token>`. 
 - `GET /notifications`, `PUT /notifications/:id/read`
 - `GET /notification-preferences`, `PUT /notification-preferences`
 - `GET/POST/PUT /expense-claims`
-- `GET /tasks`, `PUT /tasks/:id`, `POST /tasks/:id/comments`
-- `GET /calendar/events`, `POST /calendar/events`, `PUT /calendar/events/:id`
+- `GET /calendar/events`, `GET /calendar/events/:id`, `POST /calendar/events`, `PUT /calendar/events/:id`, `DELETE /calendar/events/:id`, `POST /calendar/events/:id/rsvp`, `GET /calendar/eligible-participants` — **shipped**, see Shipped endpoints below
 - `GET /documents`, `POST /documents/upload`, `POST /documents/:id/sign`
 - `POST /files/signed-upload-url`, `POST /files/signed-url`
 - `GET/PUT /profile`, `GET /profile/carer-details` (training/certification, availability, activity history)
