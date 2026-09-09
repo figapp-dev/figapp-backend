@@ -306,6 +306,7 @@ export type AgencyUserRow = {
   first_name: string | null;
   last_name: string | null;
   role: string;
+  figapp_id: string | null;
 };
 
 export async function listAgencyUsersByIds(
@@ -316,7 +317,7 @@ export async function listAgencyUsersByIds(
 
   const { data, error } = await supabase
     .from(TABLES.AGENCY_USERS)
-    .select("user_id, first_name, last_name, role")
+    .select("user_id, first_name, last_name, role, figapp_id")
     .in("user_id", userIds);
 
   if (error) return { data: [], error };
@@ -333,7 +334,7 @@ export async function listAgencyUsersByRole(
 
   const { data, error } = await supabase
     .from(TABLES.AGENCY_USERS)
-    .select("user_id, first_name, last_name, role")
+    .select("user_id, first_name, last_name, role, figapp_id")
     .eq("agency_id", agencyId)
     .eq("is_active", true)
     .in("user_id", userIds)

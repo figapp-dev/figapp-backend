@@ -7,7 +7,7 @@ import {
   listRemindersForEvents,
 } from "../../repositories/calendar.js";
 import type { EventDetailDto } from "../../types/calendar.js";
-import { buildParticipantNameMap } from "./shared.js";
+import { buildParticipantProfileMap } from "./shared.js";
 
 export type GetCalendarEventResult =
   | ReturnType<typeof serviceFailure>
@@ -37,18 +37,18 @@ export async function getEventForCarer(
     return serviceFailure({ error: remindersResult.error });
   }
 
-  const { data: nameMap, error: nameError } = await buildParticipantNameMap(
+  const { data: profileMap, error: profileError } = await buildParticipantProfileMap(
     supabase,
     participantsResult.data,
   );
-  if (nameError) return serviceFailure({ error: nameError });
+  if (profileError) return serviceFailure({ error: profileError });
 
   return serviceSuccess(
     toEventDetailDto(
       event,
       userId,
       participantsResult.data,
-      nameMap,
+      profileMap,
       remindersResult.data,
     ),
   );

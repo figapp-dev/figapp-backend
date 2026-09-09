@@ -8,6 +8,7 @@ import type {
   EventReminderDto,
   EventReminderRow,
   EventRow,
+  ParticipantProfile,
   ParticipantSummaryDto,
 } from "../types/calendar.js";
 
@@ -47,7 +48,7 @@ export function toEventListItemDto(
 
 export function toEventParticipantDto(
   row: EventParticipantRow,
-  displayName: string | null,
+  profile: ParticipantProfile | null,
 ): EventParticipantDto {
   return {
     id: row.id,
@@ -57,7 +58,9 @@ export function toEventParticipantDto(
     responseAt: row.response_at,
     notes: row.notes,
     isAdmin: row.event_admin_role,
-    displayName,
+    displayName: profile?.displayName ?? null,
+    figappId: profile?.figappId ?? null,
+    profileRole: profile?.profileRole ?? null,
   };
 }
 
@@ -74,7 +77,7 @@ export function toEventDetailDto(
   row: EventRow,
   selfUserId: string,
   participants: EventParticipantRow[],
-  participantNamesById: Map<string, string>,
+  participantProfilesById: Map<string, ParticipantProfile>,
   reminders: EventReminderRow[],
 ): EventDetailDto {
   const isOwnEvent = row.created_by === selfUserId;
@@ -88,7 +91,7 @@ export function toEventDetailDto(
     recurrencePattern: row.recurrence_pattern,
     isSeriesException: row.is_series_exception,
     participants: participants.map((p) =>
-      toEventParticipantDto(p, participantNamesById.get(p.user_id) ?? null),
+      toEventParticipantDto(p, participantProfilesById.get(p.user_id) ?? null),
     ),
     reminders: reminders.map(toEventReminderDto),
     canEdit: isOwnEvent || isParticipantAdmin,
@@ -102,13 +105,14 @@ export function toEligibleChildDto(child: {
   preferred_name: string | null;
   first_name: string | null;
   last_name: string | null;
+  figapp_id: string | null;
 }): EligibleChildDto {
   const displayName =
     child.preferred_name?.trim() ||
     child.legal_name?.trim() ||
     [child.first_name, child.last_name].filter(Boolean).join(" ").trim() ||
     "Unnamed child";
-  return { id: child.id, displayName };
+  return { id: child.id, displayName, figappId: child.figapp_id };
 }
 
 export function toEligibleUserDto(user: {
@@ -116,9 +120,15 @@ export function toEligibleUserDto(user: {
   first_name: string | null;
   last_name: string | null;
   role: string;
+  figapp_id: string | null;
 }): EligibleUserDto {
   const displayName =
     [user.first_name, user.last_name].filter(Boolean).join(" ").trim() ||
     "Unnamed user";
-  return { userId: user.user_id, displayName, role: user.role };
+  return {
+    userId: user.user_id,
+    displayName,
+    role: user.role,
+    figappId: user.figapp_id,
+  };
 }

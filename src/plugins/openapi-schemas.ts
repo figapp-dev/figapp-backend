@@ -870,6 +870,8 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       notes: nullableString,
       isAdmin: { type: "boolean" },
       displayName: nullableString,
+      figappId: nullableString,
+      profileRole: nullableString,
     },
   });
 
@@ -994,21 +996,23 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
   app.addSchema({
     $id: "CalendarEligibleChildDto",
     type: "object",
-    required: ["id", "displayName"],
+    required: ["id", "displayName", "figappId"],
     properties: {
       id: { type: "string" },
       displayName: { type: "string" },
+      figappId: nullableString,
     },
   });
 
   app.addSchema({
     $id: "CalendarEligibleUserDto",
     type: "object",
-    required: ["userId", "displayName", "role"],
+    required: ["userId", "displayName", "role", "figappId"],
     properties: {
       userId: { type: "string" },
       displayName: { type: "string" },
       role: { type: "string" },
+      figappId: nullableString,
     },
   });
 

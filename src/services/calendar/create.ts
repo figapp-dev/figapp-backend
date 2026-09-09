@@ -18,7 +18,7 @@ import {
   type NewEventRow,
 } from "../../repositories/calendar.js";
 import type { CreateEventBody, EventDetailDto } from "../../types/calendar.js";
-import { buildParticipantNameMap } from "./shared.js";
+import { buildParticipantProfileMap } from "./shared.js";
 
 export type CreateCalendarEventResult =
   | ReturnType<typeof serviceFailure>
@@ -144,18 +144,18 @@ export async function createEventForCarer(
   if (primaryParticipants.error) return serviceFailure({ error: primaryParticipants.error });
   if (primaryReminders.error) return serviceFailure({ error: primaryReminders.error });
 
-  const { data: nameMap, error: nameError } = await buildParticipantNameMap(
+  const { data: profileMap, error: profileError } = await buildParticipantProfileMap(
     supabase,
     primaryParticipants.data,
   );
-  if (nameError) return serviceFailure({ error: nameError });
+  if (profileError) return serviceFailure({ error: profileError });
 
   return serviceSuccess(
     toEventDetailDto(
       primary,
       userId,
       primaryParticipants.data,
-      nameMap,
+      profileMap,
       primaryReminders.data,
     ),
   );

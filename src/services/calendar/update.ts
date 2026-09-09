@@ -24,7 +24,7 @@ import type {
   EventRow,
   UpdateEventBody,
 } from "../../types/calendar.js";
-import { buildParticipantNameMap, canManageEvent } from "./shared.js";
+import { buildParticipantProfileMap, canManageEvent } from "./shared.js";
 
 export type UpdateCalendarEventResult =
   | ReturnType<typeof serviceFailure>
@@ -170,18 +170,18 @@ export async function updateEventForCarer(
   if (refetchError) return serviceFailure({ error: refetchError });
   if (!updatedEvent) return serviceFailure({ notFound: true });
 
-  const { data: nameMap, error: nameError } = await buildParticipantNameMap(
+  const { data: profileMap, error: profileError } = await buildParticipantProfileMap(
     supabase,
     participantsResult.data,
   );
-  if (nameError) return serviceFailure({ error: nameError });
+  if (profileError) return serviceFailure({ error: profileError });
 
   return serviceSuccess(
     toEventDetailDto(
       updatedEvent,
       userId,
       participantsResult.data,
-      nameMap,
+      profileMap,
       remindersResult.data,
     ),
   );

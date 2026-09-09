@@ -44,10 +44,16 @@ export async function rsvpToEventForCarer(
   );
   if (usersError) return serviceFailure({ error: usersError });
 
-  const displayName = users[0]
-    ? [users[0].first_name, users[0].last_name].filter(Boolean).join(" ").trim() ||
-      "Unnamed user"
+  const self = users[0];
+  const profile = self
+    ? {
+        displayName:
+          [self.first_name, self.last_name].filter(Boolean).join(" ").trim() ||
+          "Unnamed user",
+        figappId: self.figapp_id,
+        profileRole: self.role,
+      }
     : null;
 
-  return serviceSuccess(toEventParticipantDto(updated, displayName));
+  return serviceSuccess(toEventParticipantDto(updated, profile));
 }
