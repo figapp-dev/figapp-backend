@@ -136,9 +136,15 @@ export async function listCompletedAssignments(
   };
 }
 
-/** Incomplete pending assignments before a UK date (newest first).
- * Status is pending-only so overdue is "not started". In-progress logs
- * belong in the in-progress list, not this overdue set.
+/** Incomplete (non-completed) assignments before a UK date, newest first.
+ * Matches web's isDailyLogAssignmentOverdue exactly: "not completed" and
+ * assigned_date in the past, regardless of pending vs in_progress. A prior
+ * version filtered to status=pending only, on the theory that an
+ * in-progress log "belongs in the in-progress list" instead — but no such
+ * separate in-progress query exists anywhere in this API, so that silently
+ * made every overdue-but-started log invisible to every mobile list and
+ * undercounted the dashboard's Overdue tile (web's DashboardContent.tsx hit
+ * and fixed this exact bug previously — see the comment there).
  */
 export async function listIncompleteAssignmentsInRange(
   supabase: SupabaseClient,
@@ -150,7 +156,7 @@ export async function listIncompleteAssignmentsInRange(
     .select(ASSIGNMENT_LIST_SELECT)
     .in("household_id", householdIds)
     .lt("assigned_date", options.beforeDate)
-    .ilike("status", "pending")
+    .not("status", "in", "(completed,submitted)")
     .order("assigned_date", { ascending: false });
 
   if (options.afterDate) {
