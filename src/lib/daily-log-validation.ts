@@ -5,6 +5,7 @@ type TemplateFieldMeta = {
 
 export type TemplateFieldLike = {
   id?: string;
+  label?: string;
   required?: boolean;
   isRequired?: boolean;
   validation?: { required?: boolean };
