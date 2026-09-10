@@ -186,6 +186,7 @@ export async function dailyLogsRoute(app: FastifyInstance) {
       },
     },
     async (request) => {
+      const started = Date.now();
       const { data, error } = await getDailyLogForCarer(
         request.supabase,
         request.user.id,
@@ -200,6 +201,18 @@ export async function dailyLogsRoute(app: FastifyInstance) {
       if (!data) {
         throw notFound(ErrorMessages.DAILY_LOG_NOT_FOUND);
       }
+
+      request.log.info(
+        {
+          assignmentId: request.params.id,
+          ms: Date.now() - started,
+          hasLog: !!data.log,
+          sections: Array.isArray(data.template?.templateFields)
+            ? data.template.templateFields.length
+            : 0,
+        },
+        "daily-logs.detail",
+      );
 
       return data;
     },
