@@ -411,5 +411,27 @@ describe("validateDailyLogSubmit", () => {
         validateDailyLogSubmit({ incidents: "No" }, incidentsTemplate),
       ).toEqual({ ok: true });
     });
+
+    it("does not require other_comments even when the template marks it required", () => {
+      expect(
+        validateDailyLogSubmit(
+          { incidents: "No" },
+          [
+            {
+              id: "incidents",
+              title: "Incidents & final comments",
+              fields: [
+                { id: "incidents", label: "Incidents", required: true },
+                {
+                  id: "other_comments",
+                  label: "Other comments for the day",
+                  required: true,
+                },
+              ],
+            },
+          ],
+        ),
+      ).toEqual({ ok: true });
+    });
   });
 });
