@@ -46,32 +46,33 @@ export async function getDailyLogForCarer(
     return { data: null, error: null };
   }
 
-  const { childNames, parentNames } = await loadSubjectNames(supabase, [row]);
-
-  const educationArrangement = await loadEducationArrangement(
-    supabase,
-    row.child_id,
-  );
-  const parentingAssessmentSection = await loadParentingAssessmentSection(
-    supabase,
-    row,
-  );
-
   const existingLog = pickLogForAssignment(row);
-  let contributors: DailyLogContributorDto[] = [];
-  if (existingLog?.id) {
-    const loaded = await loadContributorsForLog(supabase, existingLog.id);
-    if (loaded.error) {
-      return { data: null, error: loaded.error };
-    }
-    contributors = loaded.data;
+  const [
+    { childNames, parentNames },
+    educationArrangement,
+    parentingAssessmentSection,
+    contributorsResult,
+  ] = await Promise.all([
+    loadSubjectNames(supabase, [row]),
+    loadEducationArrangement(supabase, row.child_id),
+    loadParentingAssessmentSection(supabase, row),
+    existingLog?.id
+      ? loadContributorsForLog(supabase, existingLog.id)
+      : Promise.resolve({
+          data: [] as DailyLogContributorDto[],
+          error: null as Error | null,
+        }),
+  ]);
+
+  if (contributorsResult.error) {
+    return { data: null, error: contributorsResult.error };
   }
 
   return {
     data: toDailyLogDetailDto(
       row,
       resolveSubjectName(row, childNames, parentNames),
-      contributors,
+      contributorsResult.data,
       educationArrangement,
       parentingAssessmentSection,
     ),
