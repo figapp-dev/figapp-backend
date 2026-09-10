@@ -290,8 +290,20 @@ export function isValueEmpty(value: unknown): boolean {
   return false;
 }
 
+/** End-of-day free-text note — always optional regardless of template `required`. */
+export function isOtherCommentsField(
+  field: TemplateFieldLike | null | undefined,
+): boolean {
+  if (!field) return false;
+  const text = `${field.id ?? ""} ${field.label ?? ""}`.toLowerCase();
+  return text.includes("other comment") || text.includes("other_comments");
+}
+
 export function isFieldRequired(field: TemplateFieldLike | null | undefined): boolean {
   if (!field) return false;
+  // Matches web templateUtils + Flutter required_fields: carers may leave
+  // the final "anything else" note blank even when the template says required.
+  if (isOtherCommentsField(field)) return false;
   return (
     field.required === true ||
     field.isRequired === true ||
