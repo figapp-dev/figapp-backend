@@ -322,6 +322,7 @@ export type AgencyUserRow = {
   last_name: string | null;
   role: string;
   figapp_id: string | null;
+  email?: string | null;
 };
 
 export async function listAgencyUsersByIds(
@@ -333,6 +334,22 @@ export async function listAgencyUsersByIds(
   const { data, error } = await supabase
     .from(TABLES.AGENCY_USERS)
     .select("user_id, first_name, last_name, role, figapp_id")
+    .in("user_id", userIds);
+
+  if (error) return { data: [], error };
+  return { data: (data ?? []) as AgencyUserRow[], error: null };
+}
+
+/** Contact fields for invite emails — same columns the web picker loads. */
+export async function listAgencyUsersContactByIds(
+  supabase: SupabaseClient,
+  userIds: string[],
+): Promise<{ data: AgencyUserRow[]; error: Error | null }> {
+  if (userIds.length === 0) return { data: [], error: null };
+
+  const { data, error } = await supabase
+    .from(TABLES.AGENCY_USERS)
+    .select("user_id, first_name, last_name, role, figapp_id, email")
     .in("user_id", userIds);
 
   if (error) return { data: [], error };

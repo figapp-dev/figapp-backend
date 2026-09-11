@@ -25,6 +25,7 @@ import type {
   UpdateEventBody,
 } from "../../types/calendar.js";
 import { buildParticipantProfileMap, canManageEvent } from "./shared.js";
+import { notifyParticipantsAdded } from "./notify.js";
 
 export type UpdateCalendarEventResult =
   | ReturnType<typeof serviceFailure>
@@ -146,14 +147,14 @@ export async function updateEventForCarer(
   );
   if (remindersSyncError) return serviceFailure({ error: remindersSyncError });
 
-  const participantsSyncError = await syncParticipants(
+  const participantsSync = await syncParticipants(
     supabase,
     targetEventIds,
     body.participantUserIds ?? [],
     userId,
   );
-  if (participantsSyncError) {
-    return serviceFailure({ error: participantsSyncError });
+  if (participantsSync.error) {
+    return serviceFailure({ error: participantsSync.error });
   }
 
   const [participantsResult, remindersResult] = await Promise.all([
@@ -175,6 +176,13 @@ export async function updateEventForCarer(
     participantsResult.data,
   );
   if (profileError) return serviceFailure({ error: profileError });
+
+  void notifyParticipantsAdded(supabase, {
+    actorId: userId,
+    addedUserIds: participantsSync.addedUserIds,
+    allParticipantUserIds: body.participantUserIds ?? [],
+    event: updatedEvent,
+  });
 
   return serviceSuccess(
     toEventDetailDto(
@@ -244,7 +252,7 @@ async function syncParticipants(
   targetEventIds: string[],
   participantUserIds: string[],
   selfUserId: string,
-): Promise<Error | null> {
+): Promise<{ error: Error | null; addedUserIds: string[] }> {
   const desired = new Set(
     participantUserIds.filter((id) => id !== selfUserId),
   );
@@ -253,7 +261,7 @@ async function syncParticipants(
     supabase,
     targetEventIds,
   );
-  if (error) return error;
+  if (error) return { error, addedUserIds: [] };
 
   const byEvent = new Map<string, EventParticipantRow[]>();
   for (const row of existingRows) {
@@ -293,10 +301,13 @@ async function syncParticipants(
     supabase,
     toRemoveIds,
   );
-  if (removeError) return removeError;
+  if (removeError) return { error: removeError, addedUserIds: [] };
 
   const { error: addError } = await insertParticipants(supabase, toAdd);
-  if (addError) return addError;
+  if (addError) return { error: addError, addedUserIds: [] };
 
-  return null;
+  return {
+    error: null,
+    addedUserIds: [...new Set(toAdd.map((row) => row.user_id))],
+  };
 }
