@@ -33,33 +33,19 @@ const recurrencePatternSchema = {
       properties: {
         every: { type: "integer", minimum: 1 },
         unit: { type: "string", enum: ["days", "weeks", "months", "years"] },
+        // Fastify 5 / Ajv draft-2020 rejects `oneOf` + `const` for the
+        // "after"/"until" branches (count is treated as missing). Use a flat
+        // enum shape here; create/update still enforce count/until via
+        // validateRecurrencePattern in calendar-recurrence.ts.
         end: {
-          oneOf: [
-            {
-              type: "object",
-              required: ["type"],
-              additionalProperties: false,
-              properties: { type: { const: "never" } },
-            },
-            {
-              type: "object",
-              required: ["type", "count"],
-              additionalProperties: false,
-              properties: {
-                type: { const: "after" },
-                count: { type: "integer", minimum: 1 },
-              },
-            },
-            {
-              type: "object",
-              required: ["type", "until"],
-              additionalProperties: false,
-              properties: {
-                type: { const: "until" },
-                until: { type: "string" },
-              },
-            },
-          ],
+          type: "object",
+          required: ["type"],
+          additionalProperties: false,
+          properties: {
+            type: { type: "string", enum: ["never", "after", "until"] },
+            count: { type: "integer", minimum: 1 },
+            until: { type: "string" },
+          },
         },
       },
     },
