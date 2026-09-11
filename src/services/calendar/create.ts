@@ -18,6 +18,7 @@ import {
   type NewEventRow,
 } from "../../repositories/calendar.js";
 import type { CreateEventBody, EventDetailDto } from "../../types/calendar.js";
+import { notifyEventCreation } from "./notify.js";
 import { buildParticipantProfileMap } from "./shared.js";
 
 export type CreateCalendarEventResult =
@@ -149,6 +150,13 @@ export async function createEventForCarer(
     primaryParticipants.data,
   );
   if (profileError) return serviceFailure({ error: profileError });
+
+  // Fire-and-forget invite emails + in-app notices (same Edge Function as web).
+  void notifyEventCreation(supabase, {
+    actorId: userId,
+    participantUserIds,
+    event: primary,
+  });
 
   return serviceSuccess(
     toEventDetailDto(
