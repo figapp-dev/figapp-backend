@@ -95,4 +95,16 @@ export const rsvpBodySchema = {
   },
 } as const;
 
+export const deleteEventQuerySchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    deleteScope: {
+      type: "string",
+      enum: ["single", "future", "series"],
+      default: "single",
+    },
+  },
+} as const;
+
 export type { CreateEventBody, UpdateEventBody, RsvpBody };

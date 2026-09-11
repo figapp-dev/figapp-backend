@@ -14,6 +14,7 @@ import { badRequest, forbidden, internalError, notFound } from "../lib/errors.js
 import { ErrorMessages } from "../constants/error-messages.js";
 import {
   createEventBodySchema,
+  deleteEventQuerySchema,
   rsvpBodySchema,
   updateEventBodySchema,
 } from "../schemas/calendar.js";
@@ -214,18 +215,23 @@ export async function calendarRoute(app: FastifyInstance) {
     },
   );
 
-  app.delete<{ Params: { id: string } }>(
+  app.delete<{
+    Params: { id: string };
+    Querystring: { deleteScope?: "single" | "future" | "series" };
+  }>(
     "/calendar/events/:id",
     {
       schema: {
         tags: ["calendar"],
-        summary: "Delete a single event occurrence (not the whole series)",
+        summary:
+          "Delete an event — single occurrence, this+future, or whole series",
         security: [...bearerSecurity],
         params: {
           type: "object",
           required: ["id"],
           properties: { id: { type: "string" } },
         },
+        querystring: deleteEventQuerySchema,
         response: {
           200: {
             type: "object",
@@ -241,6 +247,7 @@ export async function calendarRoute(app: FastifyInstance) {
         request.supabase,
         request.user.id,
         request.params.id,
+        request.query.deleteScope ?? "single",
       );
 
       if (result.notFound) {

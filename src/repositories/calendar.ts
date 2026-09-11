@@ -108,6 +108,21 @@ export async function deleteEventRow(
   return { error };
 }
 
+/** Deletes every occurrence in a series, or from [fromOccurrenceIndex] onward
+ * (inclusive) when provided — matches web's future/series delete. */
+export async function deleteSeriesEvents(
+  supabase: SupabaseClient,
+  seriesId: string,
+  fromOccurrenceIndex?: number,
+): Promise<{ error: Error | null }> {
+  let query = supabase.from(TABLES.EVENTS).delete().eq("series_id", seriesId);
+  if (fromOccurrenceIndex !== undefined) {
+    query = query.gte("occurrence_index", fromOccurrenceIndex);
+  }
+  const { error } = await query;
+  return { error };
+}
+
 const PARTICIPANT_SELECT =
   "id, event_id, user_id, status, role, response_at, notes, created_at, event_admin_role";
 
