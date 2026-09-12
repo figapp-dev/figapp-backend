@@ -22,24 +22,57 @@ export function displayStatusForAssignee(
   return "assigned";
 }
 
+const KNOWN_FILE_EXTENSIONS = new Set([
+  "pdf",
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+  "gif",
+  "heic",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "txt",
+]);
+
+function extensionFromName(name: string | null | undefined): string {
+  if (!name) return "";
+  const base = name.trim().split(/[\\/]/).pop() ?? "";
+  const dot = base.lastIndexOf(".");
+  if (dot <= 0 || dot >= base.length - 1) return "";
+  const ext = base.slice(dot + 1).toLowerCase();
+  // Titles like "Screenshot … at 9.27.33" must not treat "33" as an extension.
+  return KNOWN_FILE_EXTENSIONS.has(ext) ? ext : "";
+}
+
 export function documentExtension(doc: {
   title?: string | null;
   file_type?: string | null;
+  file_path?: string | null;
+  file_url?: string | null;
 }): string {
-  const title = doc.title ?? "";
-  const dot = title.lastIndexOf(".");
-  if (dot > 0 && dot < title.length - 1) {
-    return title.slice(dot + 1).toLowerCase();
-  }
+  const fromPath =
+    extensionFromName(doc.file_path) || extensionFromName(doc.file_url);
+  if (fromPath) return fromPath;
+
+  const fromTitle = extensionFromName(doc.title);
+  if (fromTitle) return fromTitle;
+
   if (doc.file_type === "application/pdf") return "pdf";
   if (doc.file_type === "image/png") return "png";
   if (doc.file_type === "image/jpeg") return "jpg";
+  if (doc.file_type === "image/webp") return "webp";
+  if (doc.file_type === "image/gif") return "gif";
   return "";
 }
 
 export function supportsFinalPdf(doc: {
   title?: string | null;
   file_type?: string | null;
+  file_path?: string | null;
+  file_url?: string | null;
 }): boolean {
   return ["pdf", "png", "jpg", "jpeg"].includes(documentExtension(doc));
 }
@@ -82,6 +115,10 @@ export function toDocumentListItemDto(
     finalizationStatus: doc.finalization_status,
     previewPath,
     canSign: displayStatus !== "completed",
+    completedAt: doc.completed_at,
+    completedByName: doc.completed_by_name,
+    completedByFigappId: doc.completed_by_figapp_id,
+    completionDeclaration: doc.completion_declaration,
     assignment,
   };
 }
