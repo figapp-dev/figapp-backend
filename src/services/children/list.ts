@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getActiveHouseholdIds } from "../../lib/households.js";
 import { isBiologicalParentUnder18 } from "../../lib/age.js";
+import { isCurrentlyActivePlacement } from "../../lib/placement-status.js";
 import type {
   ChildrenListDto,
   ChildrenListItemDto,
@@ -71,7 +72,7 @@ async function buildPlacedParentItems(
   }
 
   const activeParentPlacements = parentPlacementRows.filter(
-    (row) => !row.end_date && row.biological_parent_id,
+    (row) => row.biological_parent_id && isCurrentlyActivePlacement(row),
   );
 
   const parentIds = [

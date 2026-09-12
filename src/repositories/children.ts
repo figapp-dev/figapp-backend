@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TABLES } from "../lib/tables.js";
+import { isCurrentlyActivePlacement } from "../lib/placement-status.js";
 import type {
   AllergyRow,
   BiologicalParentRow,
@@ -145,18 +146,27 @@ export async function listActiveHouseholdChildPlacements(
   supabase: SupabaseClient,
   householdIds: string[],
 ): Promise<{ data: HouseholdChildRow[]; error: Error | null }> {
+  if (householdIds.length === 0) {
+    return { data: [], error: null };
+  }
+
   const { data, error } = await supabase
     .from(TABLES.HOUSEHOLD_CHILDREN)
     .select("id, child_id, start_date, is_active, end_date")
     .eq("is_active", true)
-    .is("end_date", null)
     .in("household_id", householdIds);
 
   if (error) {
     return { data: [], error };
   }
 
-  return { data: (data ?? []) as HouseholdChildRow[], error: null };
+  // Web parity: end_date may be set in the future (or today) and still count
+  // as currently placed — do not require end_date IS NULL.
+  const rows = ((data ?? []) as HouseholdChildRow[]).filter(
+    isCurrentlyActivePlacement,
+  );
+
+  return { data: rows, error: null };
 }
 
 export async function listChildrenByIds(
@@ -227,21 +237,31 @@ export async function findActiveChildPlacementAccess(
   childId: string,
   householdIds: string[],
 ): Promise<{ data: { id: string } | null; error: Error | null }> {
+  if (householdIds.length === 0) {
+    return { data: null, error: null };
+  }
+
   const { data, error } = await supabase
     .from(TABLES.HOUSEHOLD_CHILDREN)
-    .select("id")
+    .select("id, start_date, end_date, is_active")
     .eq("child_id", childId)
     .eq("is_active", true)
-    .is("end_date", null)
-    .in("household_id", householdIds)
-    .limit(1)
-    .maybeSingle();
+    .in("household_id", householdIds);
 
   if (error) {
     return { data: null, error };
   }
 
-  return { data: (data as { id: string } | null) ?? null, error: null };
+  const match = (
+    (data ?? []) as Array<{
+      id: string;
+      start_date: string | null;
+      end_date: string | null;
+      is_active: boolean | null;
+    }>
+  ).find(isCurrentlyActivePlacement);
+
+  return { data: match ? { id: match.id } : null, error: null };
 }
 
 /** Any placement (active or ended) in the given households. */
@@ -330,23 +350,28 @@ export async function findCurrentPlacementForChild(
   childId: string,
   householdIds: string[],
 ): Promise<{ data: CurrentPlacementRow | null; error: Error | null }> {
+  if (householdIds.length === 0) {
+    return { data: null, error: null };
+  }
+
   const { data, error } = await supabase
     .from(TABLES.HOUSEHOLD_CHILDREN)
     .select(CURRENT_PLACEMENT_SELECT)
     .eq("child_id", childId)
     .eq("is_active", true)
-    .is("end_date", null)
     .in("household_id", householdIds)
-    .order("start_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("start_date", { ascending: false });
 
   if (error) {
     return { data: null, error };
   }
 
+  const match =
+    ((data ?? []) as CurrentPlacementRow[]).find(isCurrentlyActivePlacement) ??
+    null;
+
   return {
-    data: (data as CurrentPlacementRow | null) ?? null,
+    data: match,
     error: null,
   };
 }
@@ -376,23 +401,29 @@ export async function findActiveBiologicalParentPlacement(
   parentId: string,
   householdIds: string[],
 ): Promise<{ data: ParentPlacementDetailRow | null; error: Error | null }> {
+  if (householdIds.length === 0) {
+    return { data: null, error: null };
+  }
+
   const { data, error } = await supabase
     .from(TABLES.BIOLOGICAL_PARENT_PLACEMENTS)
     .select(PARENT_PLACEMENT_SELECT)
     .eq("biological_parent_id", parentId)
     .eq("is_active", true)
-    .is("end_date", null)
     .in("household_id", householdIds)
-    .order("start_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("start_date", { ascending: false });
 
   if (error) {
     return { data: null, error };
   }
 
+  const match =
+    ((data ?? []) as ParentPlacementDetailRow[]).find(
+      isCurrentlyActivePlacement,
+    ) ?? null;
+
   return {
-    data: (data as ParentPlacementDetailRow | null) ?? null,
+    data: match,
     error: null,
   };
 }
