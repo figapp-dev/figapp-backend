@@ -89,6 +89,8 @@ export const ErrorMessages = {
     "Confirm you have read the document before signing",
 
   HOUSEHOLDS_LOAD_FAILED: "Failed to load households",
+  HOUSEHOLD_NOT_FOUND: "Household not found",
+  HOUSEHOLD_LOAD_FAILED: "Failed to load household",
 
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",

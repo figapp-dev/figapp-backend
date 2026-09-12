@@ -1180,4 +1180,122 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       },
     },
   });
+
+  app.addSchema({
+    $id: "HouseholdCarerDetailDto",
+    type: "object",
+    required: ["userId", "displayName", "figappId", "email", "phone", "isSelf"],
+    properties: {
+      userId: { type: "string" },
+      displayName: { type: "string" },
+      figappId: nullableString,
+      email: nullableString,
+      phone: nullableString,
+      isSelf: { type: "boolean" },
+    },
+  });
+
+  app.addSchema({
+    $id: "HouseholdStaffMemberDto",
+    type: "object",
+    required: ["userId", "displayName", "figappId", "email", "phone"],
+    properties: {
+      userId: { type: "string" },
+      displayName: { type: "string" },
+      figappId: nullableString,
+      email: nullableString,
+      phone: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "HouseholdLinkedChildDto",
+    type: "object",
+    required: ["id", "displayName", "figappId"],
+    properties: {
+      id: { type: "string" },
+      displayName: { type: "string" },
+      figappId: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "HouseholdCurrentChildDto",
+    type: "object",
+    required: [
+      "kind",
+      "id",
+      "displayName",
+      "figappId",
+      "relationship",
+      "linkedChild",
+    ],
+    properties: {
+      kind: { type: "string", enum: ["child", "placed_parent"] },
+      id: { type: "string" },
+      displayName: { type: "string" },
+      figappId: nullableString,
+      relationship: nullableString,
+      linkedChild: {
+        anyOf: [{ $ref: "HouseholdLinkedChildDto#" }, { type: "null" }],
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: "HouseholdDetailDto",
+    type: "object",
+    required: [
+      "id",
+      "figappId",
+      "name",
+      "status",
+      "createdAt",
+      "addressLine1",
+      "addressLine2",
+      "city",
+      "postalCode",
+      "country",
+      "maxChildren",
+      "activeFosterCarersCount",
+      "childrenInPlacementCount",
+      "capacityUtilizationPercent",
+      "fosterCarers",
+      "socialWorkers",
+      "swManagers",
+      "currentChildren",
+    ],
+    properties: {
+      id: { type: "string" },
+      figappId: nullableString,
+      name: { type: "string" },
+      status: nullableString,
+      createdAt: nullableString,
+      addressLine1: nullableString,
+      addressLine2: nullableString,
+      city: nullableString,
+      postalCode: nullableString,
+      country: nullableString,
+      maxChildren: { type: "integer", nullable: true },
+      activeFosterCarersCount: { type: "integer" },
+      childrenInPlacementCount: { type: "integer" },
+      capacityUtilizationPercent: { type: "integer" },
+      fosterCarers: {
+        type: "array",
+        items: { $ref: "HouseholdCarerDetailDto#" },
+      },
+      socialWorkers: {
+        type: "array",
+        items: { $ref: "HouseholdStaffMemberDto#" },
+      },
+      swManagers: {
+        type: "array",
+        items: { $ref: "HouseholdStaffMemberDto#" },
+      },
+      currentChildren: {
+        type: "array",
+        items: { $ref: "HouseholdCurrentChildDto#" },
+      },
+    },
+  });
 }
