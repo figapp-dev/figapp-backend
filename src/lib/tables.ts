@@ -36,4 +36,7 @@ export const TABLES = {
   EVENTS: "events",
   EVENT_PARTICIPANTS: "event_participants",
   EVENT_REMINDERS: "event_reminders",
+
+  DOCUMENTS: "documents",
+  DOCUMENT_ASSIGNEES: "document_assignees",
 } as const;

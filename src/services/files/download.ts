@@ -5,6 +5,7 @@ import {
   STORAGE_BUCKETS,
   isAllowedStorageBucket,
 } from "../../lib/storage.js";
+import { findDocumentAccessibleByPath } from "../../repositories/documents.js";
 import { createSignedDownloadUrl as createStorageSignedDownloadUrl } from "../../repositories/files.js";
 import type { SignedUrlDto } from "../../types/files.js";
 import { getDailyLogAssignmentForCarer } from "./access.js";
@@ -42,6 +43,16 @@ export async function createSignedDownloadUrl(
       return serviceFailure({ error: access.error });
     }
     if (access.forbidden || !access.assignment) {
+      return serviceFailure({ forbidden: true });
+    }
+  }
+
+  if (bucket === STORAGE_BUCKETS.DOCUMENTS) {
+    const access = await findDocumentAccessibleByPath(supabase, userId, path);
+    if (access.error) {
+      return serviceFailure({ error: access.error });
+    }
+    if (!access.data) {
       return serviceFailure({ forbidden: true });
     }
   }

@@ -48,6 +48,11 @@ describe("API smoke", () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it("GET /documents without auth returns 401", async () => {
+    const res = await app.inject({ method: "GET", url: "/documents" });
+    expect(res.statusCode).toBe(401);
+  });
+
   it("PUT /figchat/conversations/:id/read without auth returns 401", async () => {
     const res = await app.inject({
       method: "PUT",

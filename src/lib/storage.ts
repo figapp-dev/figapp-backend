@@ -2,7 +2,7 @@ export const STORAGE_BUCKETS = {
   DAILY_LOGS: "daily-logs",
   FIGCHAT: "figchat",
   LIFE_STORY: "life_story",
-  // Later: DOCUMENTS, etc.
+  DOCUMENTS: "documents",
 } as const;
 
 export type StorageBucket =
@@ -15,6 +15,7 @@ const ALLOWED_BUCKETS = new Set<string>([
   STORAGE_BUCKETS.DAILY_LOGS,
   STORAGE_BUCKETS.FIGCHAT,
   STORAGE_BUCKETS.LIFE_STORY,
+  STORAGE_BUCKETS.DOCUMENTS,
 ]);
 
 export function isAllowedStorageBucket(bucket: string): bucket is StorageBucket {
