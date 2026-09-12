@@ -114,6 +114,7 @@ function toPlacementHouseholdDto(
   return {
     id: household.id,
     name: household.name,
+    figappId: household.household_id_system,
     addressLine1: household.address_line1,
     addressLine2: household.address_line2,
     city: household.city,

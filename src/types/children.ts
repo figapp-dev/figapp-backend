@@ -110,6 +110,7 @@ export type ProfessionalContactDto = {
 export type PlacementHouseholdDto = {
   id: string;
   name: string | null;
+  figappId: string | null;
   addressLine1: string | null;
   addressLine2: string | null;
   city: string | null;
@@ -196,6 +197,7 @@ export type ContactRow = {
 export type PlacementHouseholdRow = {
   id: string;
   name: string | null;
+  household_id_system: string | null;
   address_line1: string | null;
   address_line2: string | null;
   city: string | null;

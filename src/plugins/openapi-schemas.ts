@@ -203,6 +203,7 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
     properties: {
       id: { type: "string" },
       name: nullableString,
+      figappId: nullableString,
       addressLine1: nullableString,
       addressLine2: nullableString,
       city: nullableString,
