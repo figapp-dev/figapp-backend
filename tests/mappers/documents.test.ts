@@ -18,7 +18,24 @@ describe("documents mapper helpers", () => {
     expect(documentExtension({ title: "Scan", file_type: "image/png" })).toBe(
       "png",
     );
+    expect(
+      documentExtension({
+        title: "Screenshot 2026-05-04 at 9.27.33 AM",
+        file_type: "image/png",
+      }),
+    ).toBe("png");
+    expect(
+      documentExtension({
+        title: "Screenshot 2026-05-04 at 9.27.33 AM.png",
+      }),
+    ).toBe("png");
     expect(supportsFinalPdf({ title: "form.DOCX" })).toBe(false);
     expect(supportsFinalPdf({ title: "form.pdf" })).toBe(true);
+    expect(
+      supportsFinalPdf({
+        title: "Screenshot 2026-05-04 at 9.27.33",
+        file_path: "user/abc.png",
+      }),
+    ).toBe(true);
   });
 });

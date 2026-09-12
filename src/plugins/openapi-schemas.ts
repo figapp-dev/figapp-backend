@@ -1066,6 +1066,10 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       "finalizationStatus",
       "previewPath",
       "canSign",
+      "completedAt",
+      "completedByName",
+      "completedByFigappId",
+      "completionDeclaration",
       "assignment",
     ],
     properties: {
@@ -1085,6 +1089,10 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       finalizationStatus: nullableString,
       previewPath: nullableString,
       canSign: { type: "boolean" },
+      completedAt: nullableString,
+      completedByName: nullableString,
+      completedByFigappId: nullableString,
+      completionDeclaration: nullableString,
       assignment: { $ref: "DocumentAssignmentDto#" },
     },
   });

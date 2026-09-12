@@ -70,6 +70,10 @@ export type DocumentListItemDto = {
   /** Prefer final path for preview when present */
   previewPath: string | null;
   canSign: boolean;
+  completedAt: string | null;
+  completedByName: string | null;
+  completedByFigappId: string | null;
+  completionDeclaration: string | null;
   assignment: DocumentAssignmentDto;
 };
 
