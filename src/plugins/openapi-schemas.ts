@@ -1120,4 +1120,64 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       finalizationMessage: nullableString,
     },
   });
+
+  app.addSchema({
+    $id: "HouseholdCarerDto",
+    type: "object",
+    required: ["userId", "displayName", "figappId", "isSelf"],
+    properties: {
+      userId: { type: "string" },
+      displayName: { type: "string" },
+      figappId: nullableString,
+      isSelf: { type: "boolean" },
+    },
+  });
+
+  app.addSchema({
+    $id: "HouseholdListItemDto",
+    type: "object",
+    required: [
+      "id",
+      "figappId",
+      "name",
+      "status",
+      "addressLine1",
+      "addressLine2",
+      "city",
+      "postalCode",
+      "country",
+      "maxChildren",
+      "placedChildrenCount",
+      "fosterCarers",
+    ],
+    properties: {
+      id: { type: "string" },
+      figappId: nullableString,
+      name: { type: "string" },
+      status: nullableString,
+      addressLine1: nullableString,
+      addressLine2: nullableString,
+      city: nullableString,
+      postalCode: nullableString,
+      country: nullableString,
+      maxChildren: { type: "integer", nullable: true },
+      placedChildrenCount: { type: "integer" },
+      fosterCarers: {
+        type: "array",
+        items: { $ref: "HouseholdCarerDto#" },
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: "HouseholdListDto",
+    type: "object",
+    required: ["households"],
+    properties: {
+      households: {
+        type: "array",
+        items: { $ref: "HouseholdListItemDto#" },
+      },
+    },
+  });
 }

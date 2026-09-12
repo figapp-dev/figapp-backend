@@ -88,6 +88,8 @@ export const ErrorMessages = {
   DOCUMENT_SIGN_CONFIRM_REQUIRED:
     "Confirm you have read the document before signing",
 
+  HOUSEHOLDS_LOAD_FAILED: "Failed to load households",
+
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",

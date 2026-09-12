@@ -1,0 +1,39 @@
+import type { FastifyInstance } from "fastify";
+import { requireAuth } from "../plugins/auth.js";
+import { bearerSecurity, errorResponses } from "../plugins/swagger.js";
+import { listHouseholdsForCarer } from "../services/households/index.js";
+import { internalError } from "../lib/errors.js";
+import { ErrorMessages } from "../constants/error-messages.js";
+
+export async function householdsRoute(app: FastifyInstance) {
+  app.addHook("preHandler", requireAuth);
+
+  app.get(
+    "/households",
+    {
+      schema: {
+        tags: ["households"],
+        summary:
+          "List households linked to the signed-in foster carer (My Household)",
+        security: [...bearerSecurity],
+        response: {
+          200: { $ref: "HouseholdListDto#" },
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const result = await listHouseholdsForCarer(
+        request.supabase,
+        request.user.id,
+      );
+
+      if (result.error || !result.data) {
+        request.log.error(result.error);
+        throw internalError(ErrorMessages.HOUSEHOLDS_LOAD_FAILED);
+      }
+
+      return result.data;
+    },
+  );
+}
