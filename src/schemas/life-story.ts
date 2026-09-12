@@ -1,12 +1,10 @@
 import type { AddLifeStoryEntryBody } from "../types/life-story.js";
 
-/** POST /life-story/:childId — media is required; this endpoint is
- * specifically the daily-log "Add to Life Story" photo flow. `media.path`
- * must come from a prior POST /files/signed-upload-url call with resource
- * "life_story" for this same child. */
+/** POST /life-story/:childId — media optional (notes-only allowed).
+ * When media is sent, path must come from signed-upload-url for life_story. */
 export const addLifeStoryEntryBodySchema = {
   type: "object",
-  required: ["section", "media"],
+  required: ["section"],
   additionalProperties: false,
   properties: {
     section: {

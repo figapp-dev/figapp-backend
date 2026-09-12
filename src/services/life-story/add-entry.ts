@@ -13,6 +13,7 @@ import { inferLifeStoryMediaType } from "./media-type.js";
 import {
   isLifeStorySectionKey,
   lifeStorySectionLabel,
+  type LifeStorySectionKey,
 } from "../../types/life-story.js";
 import type {
   AddLifeStoryEntryBody,
@@ -20,7 +21,7 @@ import type {
   LifeStoryEntryRow,
 } from "../../types/life-story.js";
 
-/** Same cap as web's addLeisurePhotosFromDailyLog.ts. */
+/** Same cap as web's saveLifeStoryUpdates / addLeisurePhotosFromDailyLog. */
 const MAX_ENTRIES = 150;
 
 export async function addLifeStoryEntryForCarer(
@@ -37,18 +38,26 @@ export async function addLifeStoryEntryForCarer(
     return serviceFailure({ badRequest: true });
   }
 
-  // This endpoint is specifically for the daily-log "Add to Life Story"
-  // photo flow (matches web's addLeisurePhotosFromDailyLog.ts) — an entry
-  // always carries media. Notes-only Life Story contributions are a
-  // separate, not-yet-built flow (see saveLifeStory.ts on web).
+  const notes = body.notes?.trim() ?? "";
   const media = body.media;
-  if (!media?.path?.trim() || !media.name?.trim()) {
+  const hasMedia = Boolean(media?.path?.trim() && media?.name?.trim());
+
+  // Web parity: create an entry when there is a new photo OR non-empty notes.
+  if (!hasMedia && !notes) {
     return serviceFailure({ badRequest: true });
   }
 
-  const mediaPath = media.path.trim();
-  if (lifeStoryChildIdFromPath(mediaPath) !== childId) {
-    return serviceFailure({ forbidden: true });
+  let mediaPath: string | null = null;
+  let mediaName: string | null = null;
+  let mediaType: LifeStoryEntryRow["media_type"] = "file";
+
+  if (hasMedia && media) {
+    mediaPath = media.path.trim();
+    if (lifeStoryChildIdFromPath(mediaPath) !== childId) {
+      return serviceFailure({ forbidden: true });
+    }
+    mediaName = media.name.trim();
+    mediaType = inferLifeStoryMediaType(media.name, media.contentType);
   }
 
   const { householdIds, error: householdError } = await getActiveHouseholdIds(
@@ -81,14 +90,25 @@ export async function addLifeStoryEntryForCarer(
     ? lifeStoryData.lifestory_entries
     : [];
 
+  const existingNotes = lifeStoryData?.lifestory_section_notes ?? {};
+  const nextSectionNotes: Partial<Record<LifeStorySectionKey, string>> = {
+    ...existingNotes,
+  };
+  // Mirror web Add tab: when notes are included in the body, refresh the
+  // section-notes seed. Media-only daily-log posts omit notes and leave
+  // existing section notes untouched.
+  if (body.notes !== undefined) {
+    nextSectionNotes[section] = notes;
+  }
+
   const newEntry: LifeStoryEntryRow = {
     id: randomUUID(),
     section,
     section_label: lifeStorySectionLabel(section),
-    notes: body.notes?.trim() ?? "",
+    notes,
     media_url: mediaPath,
-    media_type: inferLifeStoryMediaType(media.name, media.contentType),
-    media_name: media.name.trim(),
+    media_type: mediaType,
+    media_name: mediaName,
     created_at: new Date().toISOString(),
     created_by: userId,
   };
@@ -97,7 +117,7 @@ export async function addLifeStoryEntryForCarer(
 
   const { error: updateError } = await updateChildLifeStoryData(supabase, childId, {
     ...(lifeStoryData ?? {}),
-    lifestory_section_notes: lifeStoryData?.lifestory_section_notes ?? {},
+    lifestory_section_notes: nextSectionNotes,
     lifestory_entries: mergedEntries,
   });
   if (updateError) {

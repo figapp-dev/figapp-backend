@@ -57,7 +57,7 @@ export const ErrorMessages = {
   LIFE_STORY_LOAD_FAILED: "Failed to load life story",
   LIFE_STORY_ADD_FAILED: "Failed to add life story entry",
   LIFE_STORY_INVALID_BODY:
-    "section and media (path, name) are required",
+    "section is required, and either notes or media (path, name) must be provided",
   LIFE_STORY_ACCESS_DENIED:
     "This child is not currently placed with your household",
 

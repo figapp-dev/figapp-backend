@@ -57,12 +57,12 @@ export type LifeStoryEntryDto = {
 export type LifeStoryListDto = {
   childId: string;
   entries: LifeStoryEntryDto[];
+  sectionNotes: Record<LifeStorySectionKey, string>;
 };
 
-/** `mediaPath` must come from a prior POST /files/signed-upload-url call
- * with resource "life_story" for this same child — the service verifies
- * the path's childId segment before accepting it, so a client can't file
- * an entry under another child's storage folder. */
+/** Media is optional — notes-only entries match web saveLifeStoryUpdates.
+ * When media is present, `path` must come from POST /files/signed-upload-url
+ * with resource "life_story" for this same child. */
 export type AddLifeStoryEntryBody = {
   section: string;
   notes?: string;
