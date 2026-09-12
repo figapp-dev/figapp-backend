@@ -37,11 +37,14 @@ export const CHILD_DETAIL_SELECT = `
 
 export const CURRENT_PLACEMENT_SELECT = `
   id,
+  child_id,
   start_date,
   end_date,
+  is_active,
   carer_households:household_id (
     id,
     name,
+    household_id_system,
     address_line1,
     address_line2,
     city,
@@ -59,6 +62,7 @@ export const PARENT_PLACEMENT_SELECT = `
   carer_households:household_id (
     id,
     name,
+    household_id_system,
     address_line1,
     address_line2,
     city,
@@ -76,6 +80,7 @@ export const PLACEMENT_HISTORY_SELECT = `
   carer_households:household_id (
     id,
     name,
+    household_id_system,
     address_line1,
     address_line2,
     city,
