@@ -1032,4 +1032,84 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       },
     },
   });
+
+  app.addSchema({
+    $id: "DocumentAssignmentDto",
+    type: "object",
+    required: ["id", "status", "hasRead", "readAt", "signedAt"],
+    properties: {
+      id: { type: "string" },
+      status: { type: "string" },
+      hasRead: { type: "boolean" },
+      readAt: nullableString,
+      signedAt: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "DocumentListItemDto",
+    type: "object",
+    required: [
+      "id",
+      "title",
+      "documentType",
+      "description",
+      "filePath",
+      "fileType",
+      "fileSizeBytes",
+      "status",
+      "displayStatus",
+      "createdAt",
+      "updatedAt",
+      "childId",
+      "finalFilePath",
+      "finalizationStatus",
+      "previewPath",
+      "canSign",
+      "assignment",
+    ],
+    properties: {
+      id: { type: "string" },
+      title: { type: "string" },
+      documentType: nullableString,
+      description: nullableString,
+      filePath: nullableString,
+      fileType: nullableString,
+      fileSizeBytes: { type: "integer", nullable: true },
+      status: nullableString,
+      displayStatus: { type: "string", enum: ["assigned", "completed"] },
+      createdAt: nullableString,
+      updatedAt: nullableString,
+      childId: nullableString,
+      finalFilePath: nullableString,
+      finalizationStatus: nullableString,
+      previewPath: nullableString,
+      canSign: { type: "boolean" },
+      assignment: { $ref: "DocumentAssignmentDto#" },
+    },
+  });
+
+  app.addSchema({
+    $id: "DocumentListDto",
+    type: "object",
+    required: ["documents", "toReviewCount"],
+    properties: {
+      documents: {
+        type: "array",
+        items: { $ref: "DocumentListItemDto#" },
+      },
+      toReviewCount: { type: "integer" },
+    },
+  });
+
+  app.addSchema({
+    $id: "DocumentSignResultDto",
+    type: "object",
+    required: ["document", "finalized", "finalizationMessage"],
+    properties: {
+      document: { $ref: "DocumentListItemDto#" },
+      finalized: { type: "boolean" },
+      finalizationMessage: nullableString,
+    },
+  });
 }

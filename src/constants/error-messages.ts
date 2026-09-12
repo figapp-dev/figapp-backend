@@ -79,6 +79,15 @@ export const ErrorMessages = {
   CALENDAR_ELIGIBLE_PARTICIPANTS_LOAD_FAILED:
     "Failed to load who you can invite",
 
+  DOCUMENTS_LOAD_FAILED: "Failed to load documents",
+  DOCUMENTS_INVALID_QUERY: "status must be all, to_review, or completed",
+  DOCUMENT_NOT_FOUND: "Document not found",
+  DOCUMENT_LOAD_FAILED: "Failed to load document",
+  DOCUMENT_ACCESS_DENIED: "You do not have access to this document",
+  DOCUMENT_SIGN_FAILED: "Failed to sign document",
+  DOCUMENT_SIGN_CONFIRM_REQUIRED:
+    "Confirm you have read the document before signing",
+
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",
