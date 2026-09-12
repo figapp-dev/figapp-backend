@@ -6,8 +6,19 @@ import {
   listChildrenForCarer,
   listPlacementsForCarer,
 } from "../services/children/index.js";
-import { internalError, notFound } from "../lib/errors.js";
+import {
+  createChildDocumentForCarer,
+  listChildDocumentsForCarer,
+} from "../services/child-documents/index.js";
+import {
+  badRequest,
+  forbidden,
+  internalError,
+  notFound,
+} from "../lib/errors.js";
 import { ErrorMessages } from "../constants/error-messages.js";
+import { createChildDocumentBodySchema } from "../schemas/child-documents.js";
+import type { CreateChildDocumentBody } from "../types/child-documents.js";
 
 export async function childrenRoute(app: FastifyInstance) {
   app.addHook("preHandler", requireAuth);
@@ -113,6 +124,88 @@ export async function childrenRoute(app: FastifyInstance) {
       }
 
       return data;
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    "/children/:id/documents",
+    {
+      schema: {
+        tags: ["children"],
+        summary: "List child profile documents (upload library)",
+        security: [...bearerSecurity],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "string" } },
+        },
+        response: {
+          200: { $ref: "ChildDocumentsListDto#" },
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const result = await listChildDocumentsForCarer(
+        request.supabase,
+        request.user.id,
+        request.params.id,
+      );
+
+      if (result.badRequest) {
+        throw badRequest(ErrorMessages.CHILD_DOCUMENTS_INVALID_BODY);
+      }
+      if (result.forbidden) {
+        throw forbidden(ErrorMessages.CHILD_DOCUMENTS_ACCESS_DENIED);
+      }
+      if (result.error || !result.data) {
+        request.log.error(result.error);
+        throw internalError(ErrorMessages.CHILD_DOCUMENTS_LOAD_FAILED);
+      }
+
+      return result.data;
+    },
+  );
+
+  app.post<{ Params: { id: string }; Body: CreateChildDocumentBody }>(
+    "/children/:id/documents",
+    {
+      schema: {
+        tags: ["children"],
+        summary: "Register a child profile document after signed upload",
+        security: [...bearerSecurity],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "string" } },
+        },
+        body: createChildDocumentBodySchema,
+        response: {
+          200: { $ref: "ChildDocumentDto#" },
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const result = await createChildDocumentForCarer(
+        request.supabase,
+        request.user.id,
+        request.params.id,
+        request.body,
+      );
+
+      if (result.badRequest) {
+        throw badRequest(ErrorMessages.CHILD_DOCUMENTS_INVALID_BODY);
+      }
+      if (result.forbidden) {
+        throw forbidden(ErrorMessages.CHILD_DOCUMENTS_ACCESS_DENIED);
+      }
+      if (result.error || !result.data) {
+        request.log.error(result.error);
+        throw internalError(ErrorMessages.CHILD_DOCUMENTS_UPLOAD_FAILED);
+      }
+
+      return result.data;
     },
   );
 }

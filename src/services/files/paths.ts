@@ -106,3 +106,41 @@ export function lifeStoryChildIdFromPath(path: string): string | null {
   const parts = path.split("/").filter(Boolean);
   return parts[2] ?? null;
 }
+
+/**
+ * Path shape: `{userId}/children/{childId}/documents/{uuid}.ext` — matches
+ * web ChildProfileDialog upload into the private `documents` bucket. Storage
+ * insert RLS requires foldername(name)[1] = auth.uid()::text.
+ */
+export function buildChildDocumentStoragePath(options: {
+  userId: string;
+  childId: string;
+  fileName: string;
+}): string {
+  const ext = extensionFromFileName(options.fileName);
+  return `${options.userId}/children/${options.childId}/documents/${randomUUID()}.${ext}`;
+}
+
+/** Child id from a child-document storage path; null if shape is wrong. */
+export function childDocumentChildIdFromPath(path: string): string | null {
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length < 5) return null;
+  if (parts[1] !== "children" || parts[3] !== "documents") return null;
+  return parts[2] ?? null;
+}
+
+/** True when path was minted for this uploader + child (POST metadata check). */
+export function isChildDocumentPathForUploader(
+  path: string,
+  userId: string,
+  childId: string,
+): boolean {
+  const parts = path.split("/").filter(Boolean);
+  return (
+    parts.length >= 5 &&
+    parts[0] === userId &&
+    parts[1] === "children" &&
+    parts[2] === childId &&
+    parts[3] === "documents"
+  );
+}

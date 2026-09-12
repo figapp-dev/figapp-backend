@@ -5,9 +5,12 @@ import {
   STORAGE_BUCKETS,
   isAllowedStorageBucket,
 } from "../../lib/storage.js";
+import { getActiveHouseholdIds } from "../../lib/households.js";
+import { findChildDocumentByStoragePath } from "../../repositories/child-documents.js";
 import { findDocumentAccessibleByPath } from "../../repositories/documents.js";
 import { createSignedDownloadUrl as createStorageSignedDownloadUrl } from "../../repositories/files.js";
 import type { SignedUrlDto } from "../../types/files.js";
+import { assertChildAccessibleToCarer } from "../children/shared.js";
 import { getDailyLogAssignmentForCarer } from "./access.js";
 import { dailyLogAssignmentIdFromPath } from "./paths.js";
 
@@ -48,12 +51,27 @@ export async function createSignedDownloadUrl(
   }
 
   if (bucket === STORAGE_BUCKETS.DOCUMENTS) {
-    const access = await findDocumentAccessibleByPath(supabase, userId, path);
-    if (access.error) {
-      return serviceFailure({ error: access.error });
+    const assigneeAccess = await findDocumentAccessibleByPath(
+      supabase,
+      userId,
+      path,
+    );
+    if (assigneeAccess.error) {
+      return serviceFailure({ error: assigneeAccess.error });
     }
-    if (!access.data) {
-      return serviceFailure({ forbidden: true });
+
+    if (!assigneeAccess.data) {
+      const childDocAccess = await authorizeChildDocumentDownload(
+        supabase,
+        userId,
+        path,
+      );
+      if (childDocAccess.error) {
+        return serviceFailure({ error: childDocAccess.error });
+      }
+      if (!childDocAccess.allowed) {
+        return serviceFailure({ forbidden: true });
+      }
     }
   }
 
@@ -99,4 +117,37 @@ export async function createSignedDownloadUrl(
     signedUrl: data.signedUrl,
     expiresIn,
   });
+}
+
+async function authorizeChildDocumentDownload(
+  supabase: SupabaseClient,
+  userId: string,
+  path: string,
+): Promise<{ allowed: boolean; error: Error | null }> {
+  const { data, error } = await findChildDocumentByStoragePath(supabase, path);
+  if (error) {
+    return { allowed: false, error };
+  }
+  if (!data?.child_id) {
+    return { allowed: false, error: null };
+  }
+
+  const { householdIds, error: householdError } = await getActiveHouseholdIds(
+    supabase,
+    userId,
+  );
+  if (householdError) {
+    return { allowed: false, error: householdError };
+  }
+
+  const { allowed, error: accessError } = await assertChildAccessibleToCarer(
+    supabase,
+    data.child_id,
+    householdIds,
+  );
+  if (accessError) {
+    return { allowed: false, error: accessError };
+  }
+
+  return { allowed, error: null };
 }

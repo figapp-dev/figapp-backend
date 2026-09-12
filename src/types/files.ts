@@ -4,9 +4,13 @@
  * - daily_log → same id as GET /daily-logs/:id (assignment id)
  * - figchat → conversation id
  * - life_story → child id (same as GET /children/:id)
- * - (later) document → document id, etc.
+ * - child_document → child id (same as GET /children/:id)
  */
-export type FileResource = "daily_log" | "figchat" | "life_story";
+export type FileResource =
+  | "daily_log"
+  | "figchat"
+  | "life_story"
+  | "child_document";
 
 export type CreateFileUploadBody = {
   resource: FileResource;

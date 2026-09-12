@@ -87,6 +87,11 @@ export const ErrorMessages = {
   DOCUMENT_SIGN_FAILED: "Failed to sign document",
   DOCUMENT_SIGN_CONFIRM_REQUIRED:
     "Confirm you have read the document before signing",
+  CHILD_DOCUMENTS_LOAD_FAILED: "Failed to load child documents",
+  CHILD_DOCUMENTS_UPLOAD_FAILED: "Failed to upload child document",
+  CHILD_DOCUMENTS_ACCESS_DENIED:
+    "You do not have access to this child's documents",
+  CHILD_DOCUMENTS_INVALID_BODY: "Invalid child document request",
 
   HOUSEHOLDS_LOAD_FAILED: "Failed to load households",
   HOUSEHOLD_NOT_FOUND: "Household not found",

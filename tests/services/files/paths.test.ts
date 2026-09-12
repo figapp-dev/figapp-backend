@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildChildDocumentStoragePath,
   buildFigChatStoragePath,
   buildLifeStoryStoragePath,
+  childDocumentChildIdFromPath,
   dailyLogAssignmentIdFromPath,
   dailyLogStorageSubjectId,
   extensionFromFileName,
   figChatConversationIdFromPath,
+  isChildDocumentPathForUploader,
   lifeStoryChildIdFromPath,
   sanitizeFileName,
 } from "../../../src/services/files/paths.js";
@@ -99,5 +102,25 @@ describe("sanitizeFileName / extensionFromFileName", () => {
     expect(sanitizeFileName("   ")).toBe("upload.bin");
     expect(extensionFromFileName("photo.JPEG")).toBe("jpeg");
     expect(extensionFromFileName("noext")).toBe("bin");
+  });
+});
+
+describe("buildChildDocumentStoragePath / childDocumentChildIdFromPath", () => {
+  it("matches web child-document path shape and round-trips the child id", () => {
+    const path = buildChildDocumentStoragePath({
+      userId: "user-1",
+      childId: "child-1",
+      fileName: "report.pdf",
+    });
+    expect(path).toMatch(
+      /^user-1\/children\/child-1\/documents\/[^/]+\.pdf$/,
+    );
+    expect(childDocumentChildIdFromPath(path)).toBe("child-1");
+    expect(isChildDocumentPathForUploader(path, "user-1", "child-1")).toBe(
+      true,
+    );
+    expect(isChildDocumentPathForUploader(path, "user-2", "child-1")).toBe(
+      false,
+    );
   });
 });
