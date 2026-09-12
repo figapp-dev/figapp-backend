@@ -845,6 +845,44 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
     },
   });
 
+  app.addSchema({
+    $id: "ChildDocumentDto",
+    type: "object",
+    required: [
+      "id",
+      "title",
+      "filePath",
+      "fileType",
+      "fileSizeBytes",
+      "createdAt",
+      "createdBy",
+      "childId",
+    ],
+    properties: {
+      id: { type: "string" },
+      title: { type: "string" },
+      filePath: nullableString,
+      fileType: nullableString,
+      fileSizeBytes: { type: "integer", nullable: true },
+      createdAt: nullableString,
+      createdBy: nullableString,
+      childId: { type: "string" },
+    },
+  });
+
+  app.addSchema({
+    $id: "ChildDocumentsListDto",
+    type: "object",
+    required: ["childId", "documents"],
+    properties: {
+      childId: { type: "string" },
+      documents: {
+        type: "array",
+        items: { $ref: "ChildDocumentDto#" },
+      },
+    },
+  });
+
   const eventTypeEnum = [
     "meeting",
     "visit",

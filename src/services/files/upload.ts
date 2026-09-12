@@ -15,6 +15,7 @@ import type {
 } from "../../types/files.js";
 import { getDailyLogAssignmentForCarer } from "./access.js";
 import {
+  buildChildDocumentStoragePath,
   buildDailyLogStoragePath,
   buildFigChatStoragePath,
   buildLifeStoryStoragePath,
@@ -239,5 +240,70 @@ export async function createFileUploadUrl(
     });
   }
 
+  if (resource === "child_document") {
+    return createChildDocumentUploadUrl(supabase, userId, {
+      id,
+      fileName: fileNameRaw,
+    });
+  }
+
   return serviceFailure({ unsupported: true });
+}
+
+async function createChildDocumentUploadUrl(
+  supabase: SupabaseClient,
+  userId: string,
+  input: { id: string; fileName: string },
+) {
+  const childId = input.id.trim();
+  const fileName = sanitizeFileName(input.fileName);
+
+  const { householdIds, error: householdError } = await getActiveHouseholdIds(
+    supabase,
+    userId,
+  );
+  if (householdError) {
+    return serviceFailure({ error: householdError });
+  }
+
+  const { allowed, error: accessError } = await assertChildAccessibleToCarer(
+    supabase,
+    childId,
+    householdIds,
+  );
+  if (accessError) {
+    return serviceFailure({ error: accessError });
+  }
+  if (!allowed) {
+    return serviceFailure({ forbidden: true });
+  }
+
+  const path = buildChildDocumentStoragePath({
+    userId,
+    childId,
+    fileName,
+  });
+
+  const { data, error } = await createSignedUploadUrl(
+    supabase,
+    STORAGE_BUCKETS.DOCUMENTS,
+    path,
+    { upsert: true },
+  );
+
+  if (error || !data) {
+    return serviceFailure({
+      error: error ?? new Error("Failed to create signed upload URL"),
+    });
+  }
+
+  return serviceSuccess<CreateFileUploadDto>({
+    resource: "child_document",
+    id: childId,
+    bucket: STORAGE_BUCKETS.DOCUMENTS,
+    path: data.path,
+    token: data.token,
+    signedUrl: data.signedUrl,
+    fileName,
+  });
 }
