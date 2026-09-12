@@ -11,6 +11,7 @@ import { billingCollectRoute } from "./internal-billing.js";
 import { gocardlessWebhookRoute } from "./webhooks-gocardless.js";
 import { calendarRoute } from "./calendar.js";
 import { documentsRoute } from "./documents.js";
+import { householdsRoute } from "./households.js";
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(healthRoute);
@@ -25,4 +26,5 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(billingRoute);
   await app.register(calendarRoute);
   await app.register(documentsRoute);
+  await app.register(householdsRoute);
 }

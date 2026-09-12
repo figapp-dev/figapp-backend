@@ -53,6 +53,11 @@ describe("API smoke", () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it("GET /households without auth returns 401", async () => {
+    const res = await app.inject({ method: "GET", url: "/households" });
+    expect(res.statusCode).toBe(401);
+  });
+
   it("PUT /figchat/conversations/:id/read without auth returns 401", async () => {
     const res = await app.inject({
       method: "PUT",
