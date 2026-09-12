@@ -821,12 +821,26 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
   app.addSchema({
     $id: "LifeStoryListDto",
     type: "object",
-    required: ["childId", "entries"],
+    required: ["childId", "entries", "sectionNotes"],
     properties: {
       childId: { type: "string" },
       entries: {
         type: "array",
         items: { $ref: "LifeStoryEntryDto#" },
+      },
+      sectionNotes: {
+        type: "object",
+        required: [
+          "leisure_fun",
+          "academic_achievements",
+          "other_achievements",
+        ],
+        additionalProperties: false,
+        properties: {
+          leisure_fun: { type: "string" },
+          academic_achievements: { type: "string" },
+          other_achievements: { type: "string" },
+        },
       },
     },
   });

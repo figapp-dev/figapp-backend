@@ -55,7 +55,8 @@ export async function lifeStoryRoute(app: FastifyInstance) {
     {
       schema: {
         tags: ["life-story"],
-        summary: "Add a Life Story entry (e.g. a daily-log photo) for a placed child",
+        summary:
+          "Add a Life Story entry (photo and/or notes) for a placed child",
         security: [...bearerSecurity],
         params: {
           type: "object",
