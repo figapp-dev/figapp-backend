@@ -254,6 +254,12 @@ export async function createFileUploadUrl(
     });
   }
 
+  if (resource === "expense") {
+    return createExpenseUploadUrl(supabase, userId, {
+      fileName: fileNameRaw,
+    });
+  }
+
   return serviceFailure({ unsupported: true });
 }
 
@@ -282,6 +288,38 @@ async function createTicketUploadUrl(
     resource: "ticket",
     id: userId,
     bucket: STORAGE_BUCKETS.ATTACHMENTS,
+    path: data.path,
+    token: data.token,
+    signedUrl: data.signedUrl,
+    fileName,
+  });
+}
+
+async function createExpenseUploadUrl(
+  supabase: SupabaseClient,
+  userId: string,
+  input: { fileName: string },
+) {
+  const fileName = sanitizeFileName(input.fileName);
+  const path = `${userId}/${randomUUID()}_${fileName}`;
+
+  const { data, error } = await createSignedUploadUrl(
+    supabase,
+    STORAGE_BUCKETS.EXPENSE_ATTACHMENTS,
+    path,
+    { upsert: true },
+  );
+
+  if (error || !data) {
+    return serviceFailure({
+      error: error ?? new Error("Failed to create signed upload URL"),
+    });
+  }
+
+  return serviceSuccess<CreateFileUploadDto>({
+    resource: "expense",
+    id: userId,
+    bucket: STORAGE_BUCKETS.EXPENSE_ATTACHMENTS,
     path: data.path,
     token: data.token,
     signedUrl: data.signedUrl,

@@ -122,6 +122,18 @@ export const ErrorMessages = {
   SURVEY_REQUIRED_MISSING: "Please answer all required questions",
   SURVEY_NO_AGENCY: "You must belong to an agency to answer surveys",
 
+  EXPENSES_LIST_LOAD_FAILED: "Failed to load expense claims",
+  EXPENSE_NOT_FOUND: "Expense claim not found",
+  EXPENSE_LOAD_FAILED: "Failed to load expense claim",
+  EXPENSE_CREATE_FAILED: "Failed to create expense claim",
+  EXPENSE_UPDATE_FAILED: "Failed to update expense claim",
+  EXPENSE_COMMENT_FAILED: "Failed to add comment",
+  EXPENSE_INVALID_BODY: "Invalid expense claim request",
+  EXPENSE_ACCESS_DENIED: "You do not have access to this expense claim",
+  EXPENSE_NOT_EDITABLE:
+    "Only new or declined claims can be edited",
+  EXPENSE_NO_AGENCY: "You must belong to an agency to create expense claims",
+
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",

@@ -11,14 +11,21 @@ export const createFileUploadBodySchema = {
   properties: {
     resource: {
       type: "string",
-      enum: ["daily_log", "figchat", "life_story", "child_document", "ticket"],
+      enum: [
+        "daily_log",
+        "figchat",
+        "life_story",
+        "child_document",
+        "ticket",
+        "expense",
+      ],
       description: "Feature the file belongs to",
     },
     id: {
       type: "string",
       minLength: 1,
       description:
-        "For daily_log: assignment id (same as GET /daily-logs/:id). For figchat: conversation id. For life_story / child_document: child id. For ticket: caller user id (or any non-empty placeholder).",
+        "For daily_log: assignment id (same as GET /daily-logs/:id). For figchat: conversation id. For life_story / child_document: child id. For ticket / expense: caller user id (or any non-empty placeholder).",
     },
     fieldId: {
       type: "string",
