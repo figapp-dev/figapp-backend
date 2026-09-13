@@ -56,6 +56,9 @@ export const ErrorMessages = {
 
   LIFE_STORY_LOAD_FAILED: "Failed to load life story",
   LIFE_STORY_ADD_FAILED: "Failed to add life story entry",
+  LIFE_STORY_UPDATE_FAILED: "Failed to update life story entry",
+  LIFE_STORY_DELETE_FAILED: "Failed to delete life story entry",
+  LIFE_STORY_ENTRY_NOT_FOUND: "Life story entry not found",
   LIFE_STORY_INVALID_BODY:
     "section is required, and either notes or media (path, name) must be provided",
   LIFE_STORY_ACCESS_DENIED:

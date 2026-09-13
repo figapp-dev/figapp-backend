@@ -1,4 +1,7 @@
-import type { AddLifeStoryEntryBody } from "../types/life-story.js";
+import type {
+  AddLifeStoryEntryBody,
+  UpdateLifeStoryEntryBody,
+} from "../types/life-story.js";
 
 /** POST /life-story/:childId — media optional (notes-only allowed).
  * When media is sent, path must come from signed-upload-url for life_story. */
@@ -25,4 +28,28 @@ export const addLifeStoryEntryBodySchema = {
   },
 } as const;
 
-export type { AddLifeStoryEntryBody };
+/** PATCH /life-story/:childId/entries/:entryId */
+export const updateLifeStoryEntryBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    section: {
+      type: "string",
+      enum: ["leisure_fun", "academic_achievements", "other_achievements"],
+    },
+    notes: { type: "string" },
+    media: {
+      type: "object",
+      required: ["path", "name"],
+      additionalProperties: false,
+      properties: {
+        path: { type: "string", minLength: 1 },
+        name: { type: "string", minLength: 1 },
+        contentType: { type: "string" },
+      },
+    },
+    clearMedia: { type: "boolean" },
+  },
+} as const;
+
+export type { AddLifeStoryEntryBody, UpdateLifeStoryEntryBody };

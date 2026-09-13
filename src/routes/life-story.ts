@@ -3,12 +3,25 @@ import { requireAuth } from "../plugins/auth.js";
 import { bearerSecurity, errorResponses } from "../plugins/swagger.js";
 import {
   addLifeStoryEntryForCarer,
+  deleteLifeStoryEntryForCarer,
   listLifeStoryForCarer,
+  updateLifeStoryEntryForCarer,
 } from "../services/life-story/index.js";
-import { badRequest, forbidden, internalError } from "../lib/errors.js";
+import {
+  badRequest,
+  forbidden,
+  internalError,
+  notFound,
+} from "../lib/errors.js";
 import { ErrorMessages } from "../constants/error-messages.js";
-import { addLifeStoryEntryBodySchema } from "../schemas/life-story.js";
-import type { AddLifeStoryEntryBody } from "../types/life-story.js";
+import {
+  addLifeStoryEntryBodySchema,
+  updateLifeStoryEntryBodySchema,
+} from "../schemas/life-story.js";
+import type {
+  AddLifeStoryEntryBody,
+  UpdateLifeStoryEntryBody,
+} from "../types/life-story.js";
 
 export async function lifeStoryRoute(app: FastifyInstance) {
   app.addHook("preHandler", requireAuth);
@@ -87,6 +100,109 @@ export async function lifeStoryRoute(app: FastifyInstance) {
       if (result.error || !result.data) {
         request.log.error(result.error);
         throw internalError(ErrorMessages.LIFE_STORY_ADD_FAILED);
+      }
+
+      return result.data;
+    },
+  );
+
+  app.patch<{
+    Params: { childId: string; entryId: string };
+    Body: UpdateLifeStoryEntryBody;
+  }>(
+    "/life-story/:childId/entries/:entryId",
+    {
+      schema: {
+        tags: ["life-story"],
+        summary: "Update a Life Story entry you created",
+        security: [...bearerSecurity],
+        params: {
+          type: "object",
+          required: ["childId", "entryId"],
+          properties: {
+            childId: { type: "string" },
+            entryId: { type: "string" },
+          },
+        },
+        body: updateLifeStoryEntryBodySchema,
+        response: {
+          200: { $ref: "LifeStoryEntryDto#" },
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const result = await updateLifeStoryEntryForCarer(
+        request.supabase,
+        request.user.id,
+        request.params.childId,
+        request.params.entryId,
+        request.body,
+      );
+
+      if (result.badRequest) {
+        throw badRequest(ErrorMessages.LIFE_STORY_INVALID_BODY);
+      }
+      if (result.notFound) {
+        throw notFound(ErrorMessages.LIFE_STORY_ENTRY_NOT_FOUND);
+      }
+      if (result.forbidden) {
+        throw forbidden(ErrorMessages.LIFE_STORY_ACCESS_DENIED);
+      }
+      if (result.error || !result.data) {
+        request.log.error(result.error);
+        throw internalError(ErrorMessages.LIFE_STORY_UPDATE_FAILED);
+      }
+
+      return result.data;
+    },
+  );
+
+  app.delete<{ Params: { childId: string; entryId: string } }>(
+    "/life-story/:childId/entries/:entryId",
+    {
+      schema: {
+        tags: ["life-story"],
+        summary: "Delete a Life Story entry you created",
+        security: [...bearerSecurity],
+        params: {
+          type: "object",
+          required: ["childId", "entryId"],
+          properties: {
+            childId: { type: "string" },
+            entryId: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            required: ["ok"],
+            properties: { ok: { type: "boolean" } },
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const result = await deleteLifeStoryEntryForCarer(
+        request.supabase,
+        request.user.id,
+        request.params.childId,
+        request.params.entryId,
+      );
+
+      if (result.badRequest) {
+        throw badRequest(ErrorMessages.LIFE_STORY_INVALID_BODY);
+      }
+      if (result.notFound) {
+        throw notFound(ErrorMessages.LIFE_STORY_ENTRY_NOT_FOUND);
+      }
+      if (result.forbidden) {
+        throw forbidden(ErrorMessages.LIFE_STORY_ACCESS_DENIED);
+      }
+      if (result.error || !result.data) {
+        request.log.error(result.error);
+        throw internalError(ErrorMessages.LIFE_STORY_DELETE_FAILED);
       }
 
       return result.data;
