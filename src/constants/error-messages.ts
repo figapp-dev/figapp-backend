@@ -102,6 +102,15 @@ export const ErrorMessages = {
   PLACEMENT_LOAD_FAILED: "Failed to load placement",
   PLACEMENT_INVALID_QUERY: "kind must be child or placed_parent",
 
+  TICKETS_LIST_LOAD_FAILED: "Failed to load support tickets",
+  TICKET_NOT_FOUND: "Support ticket not found",
+  TICKET_LOAD_FAILED: "Failed to load support ticket",
+  TICKET_CREATE_FAILED: "Failed to create support ticket",
+  TICKET_COMMENT_FAILED: "Failed to add comment",
+  TICKET_INVALID_BODY: "Invalid support ticket request",
+  TICKET_ACCESS_DENIED: "You do not have access to this support ticket",
+  TICKET_NO_AGENCY: "You must belong to an agency to create a support ticket",
+
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",

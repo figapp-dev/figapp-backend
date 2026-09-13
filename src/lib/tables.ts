@@ -39,4 +39,8 @@ export const TABLES = {
 
   DOCUMENTS: "documents",
   DOCUMENT_ASSIGNEES: "document_assignees",
+
+  TICKETS: "tickets",
+  TICKET_MESSAGES: "ticket_messages",
+  TICKET_ATTACHMENTS: "ticket_attachments",
 } as const;

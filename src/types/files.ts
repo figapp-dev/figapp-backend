@@ -5,12 +5,14 @@
  * - figchat → conversation id
  * - life_story → child id (same as GET /children/:id)
  * - child_document → child id (same as GET /children/:id)
+ * - ticket → caller user id (path is always `{userId}/{uuid}_{fileName}`)
  */
 export type FileResource =
   | "daily_log"
   | "figchat"
   | "life_story"
-  | "child_document";
+  | "child_document"
+  | "ticket";
 
 export type CreateFileUploadBody = {
   resource: FileResource;

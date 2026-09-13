@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
 import { STORAGE_BUCKETS } from "../../lib/storage.js";
 import { getActiveHouseholdIds } from "../../lib/households.js";
@@ -247,7 +248,45 @@ export async function createFileUploadUrl(
     });
   }
 
+  if (resource === "ticket") {
+    return createTicketUploadUrl(supabase, userId, {
+      fileName: fileNameRaw,
+    });
+  }
+
   return serviceFailure({ unsupported: true });
+}
+
+async function createTicketUploadUrl(
+  supabase: SupabaseClient,
+  userId: string,
+  input: { fileName: string },
+) {
+  const fileName = sanitizeFileName(input.fileName);
+  const path = `${userId}/${randomUUID()}_${fileName}`;
+
+  const { data, error } = await createSignedUploadUrl(
+    supabase,
+    STORAGE_BUCKETS.ATTACHMENTS,
+    path,
+    { upsert: true },
+  );
+
+  if (error || !data) {
+    return serviceFailure({
+      error: error ?? new Error("Failed to create signed upload URL"),
+    });
+  }
+
+  return serviceSuccess<CreateFileUploadDto>({
+    resource: "ticket",
+    id: userId,
+    bucket: STORAGE_BUCKETS.ATTACHMENTS,
+    path: data.path,
+    token: data.token,
+    signedUrl: data.signedUrl,
+    fileName,
+  });
 }
 
 async function createChildDocumentUploadUrl(

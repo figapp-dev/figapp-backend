@@ -9,6 +9,10 @@ import { getActiveHouseholdIds } from "../../lib/households.js";
 import { findChildDocumentByStoragePath } from "../../repositories/child-documents.js";
 import { findDocumentAccessibleByPath } from "../../repositories/documents.js";
 import { createSignedDownloadUrl as createStorageSignedDownloadUrl } from "../../repositories/files.js";
+import {
+  findTicketAttachmentByPath,
+  findTicketByIdForCreator,
+} from "../../repositories/tickets.js";
 import type { SignedUrlDto } from "../../types/files.js";
 import { assertChildAccessibleToCarer } from "../children/shared.js";
 import { getDailyLogAssignmentForCarer } from "./access.js";
@@ -72,6 +76,20 @@ export async function createSignedDownloadUrl(
       if (!childDocAccess.allowed) {
         return serviceFailure({ forbidden: true });
       }
+    }
+  }
+
+  if (bucket === STORAGE_BUCKETS.ATTACHMENTS) {
+    const ticketAccess = await authorizeTicketAttachmentDownload(
+      supabase,
+      userId,
+      path,
+    );
+    if (ticketAccess.error) {
+      return serviceFailure({ error: ticketAccess.error });
+    }
+    if (!ticketAccess.allowed) {
+      return serviceFailure({ forbidden: true });
     }
   }
 
@@ -150,4 +168,27 @@ async function authorizeChildDocumentDownload(
   }
 
   return { allowed, error: null };
+}
+
+async function authorizeTicketAttachmentDownload(
+  supabase: SupabaseClient,
+  userId: string,
+  path: string,
+): Promise<{ allowed: boolean; error: Error | null }> {
+  // Own upload path before ticket row exists (create flow).
+  if (path.startsWith(`${userId}/`)) {
+    return { allowed: true, error: null };
+  }
+
+  const { data, error } = await findTicketAttachmentByPath(supabase, path);
+  if (error) return { allowed: false, error };
+  if (!data) return { allowed: false, error: null };
+
+  const ticket = await findTicketByIdForCreator(
+    supabase,
+    data.ticket_id,
+    userId,
+  );
+  if (ticket.error) return { allowed: false, error: ticket.error };
+  return { allowed: ticket.data != null, error: null };
 }
