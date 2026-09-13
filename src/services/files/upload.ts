@@ -3,11 +3,13 @@ import { randomUUID } from "node:crypto";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
 import { STORAGE_BUCKETS } from "../../lib/storage.js";
 import { getActiveHouseholdIds } from "../../lib/households.js";
+import { createServiceRoleClient } from "../../lib/supabase.js";
 import { createSignedUploadUrl } from "../../repositories/files.js";
 import {
   findAgencyIdForUser,
   findOwnParticipant,
 } from "../../repositories/figchat.js";
+import { findExpenseClaimByIdForCarer } from "../../repositories/expenses.js";
 import { assertChildAccessibleToCarer } from "../children/shared.js";
 import { isLifeStorySectionKey } from "../../types/life-story.js";
 import type {
@@ -256,6 +258,7 @@ export async function createFileUploadUrl(
 
   if (resource === "expense") {
     return createExpenseUploadUrl(supabase, userId, {
+      claimId: id,
       fileName: fileNameRaw,
     });
   }
@@ -298,13 +301,39 @@ async function createTicketUploadUrl(
 async function createExpenseUploadUrl(
   supabase: SupabaseClient,
   userId: string,
-  input: { fileName: string },
+  input: { claimId: string; fileName: string },
 ) {
+  const claimId = input.claimId.trim();
+  if (!claimId) {
+    return serviceFailure({ badRequest: true });
+  }
+
+  // Authz with the user client first. Storage RLS on expense-attachments can
+  // reject createSignedUploadUrl even when the carer owns the claim (nested
+  // policy checks), so mint the URL with the service role after that check —
+  // same pattern as other privileged backend writes.
+  const existing = await findExpenseClaimByIdForCarer(supabase, claimId, userId);
+  if (existing.error) {
+    return serviceFailure({ error: existing.error });
+  }
+  if (!existing.data) {
+    return serviceFailure({ forbidden: true });
+  }
+
   const fileName = sanitizeFileName(input.fileName);
-  const path = `${userId}/${randomUUID()}_${fileName}`;
+  const path = `${claimId}/${randomUUID()}_${fileName}`;
+
+  let admin: SupabaseClient;
+  try {
+    admin = createServiceRoleClient();
+  } catch (error) {
+    return serviceFailure({
+      error: error instanceof Error ? error : new Error(String(error)),
+    });
+  }
 
   const { data, error } = await createSignedUploadUrl(
-    supabase,
+    admin,
     STORAGE_BUCKETS.EXPENSE_ATTACHMENTS,
     path,
     { upsert: true },
@@ -318,7 +347,7 @@ async function createExpenseUploadUrl(
 
   return serviceSuccess<CreateFileUploadDto>({
     resource: "expense",
-    id: userId,
+    id: claimId,
     bucket: STORAGE_BUCKETS.EXPENSE_ATTACHMENTS,
     path: data.path,
     token: data.token,
