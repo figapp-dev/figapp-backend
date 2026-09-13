@@ -43,4 +43,10 @@ export const TABLES = {
   TICKETS: "tickets",
   TICKET_MESSAGES: "ticket_messages",
   TICKET_ATTACHMENTS: "ticket_attachments",
+
+  SURVEY_SENDS: "survey_sends",
+  SURVEY_TEMPLATES: "survey_templates",
+  SURVEYS: "surveys",
+  SURVEY_QUESTIONS: "survey_questions",
+  SURVEY_RESPONSES: "survey_responses",
 } as const;

@@ -1684,4 +1684,147 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       },
     },
   });
+
+  app.addSchema({
+    $id: "SurveyMyResponseSummaryDto",
+    type: "object",
+    required: ["id", "startedAt", "completedAt", "isAnonymous"],
+    properties: {
+      id: { type: "string" },
+      startedAt: nullableString,
+      completedAt: nullableString,
+      isAnonymous: { type: "boolean" },
+    },
+  });
+
+  app.addSchema({
+    $id: "SurveyListItemDto",
+    type: "object",
+    required: [
+      "id",
+      "title",
+      "description",
+      "startDate",
+      "endDate",
+      "sendStatus",
+      "isArchived",
+      "receiverStatus",
+      "cta",
+      "myResponse",
+    ],
+    properties: {
+      id: { type: "string" },
+      title: { type: "string" },
+      description: nullableString,
+      startDate: nullableString,
+      endDate: nullableString,
+      sendStatus: { type: "string" },
+      isArchived: { type: "boolean" },
+      receiverStatus: {
+        type: "string",
+        enum: ["active", "in_progress", "completed", "ended", "archived"],
+      },
+      cta: { type: "string" },
+      myResponse: {
+        anyOf: [{ $ref: "SurveyMyResponseSummaryDto#" }, { type: "null" }],
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: "SurveyListDto",
+    type: "object",
+    required: ["items"],
+    properties: {
+      items: {
+        type: "array",
+        items: { $ref: "SurveyListItemDto#" },
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: "SurveyQuestionDto",
+    type: "object",
+    required: [
+      "id",
+      "questionText",
+      "questionType",
+      "options",
+      "isRequired",
+      "orderIndex",
+      "helpText",
+    ],
+    properties: {
+      id: { type: "string" },
+      questionText: { type: "string" },
+      questionType: { type: "string" },
+      options: { type: "array", items: { type: "string" } },
+      isRequired: { type: "boolean" },
+      orderIndex: { type: "integer" },
+      helpText: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "SurveyResponseDto",
+    type: "object",
+    required: [
+      "id",
+      "responseData",
+      "isAnonymous",
+      "startedAt",
+      "completedAt",
+    ],
+    properties: {
+      id: { type: "string" },
+      responseData: { type: "object", additionalProperties: true },
+      isAnonymous: { type: "boolean" },
+      startedAt: nullableString,
+      completedAt: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "SurveyDetailDto",
+    type: "object",
+    required: [
+      "id",
+      "title",
+      "description",
+      "startDate",
+      "endDate",
+      "sendStatus",
+      "isArchived",
+      "ended",
+      "readOnly",
+      "receiverStatus",
+      "cta",
+      "questions",
+      "response",
+    ],
+    properties: {
+      id: { type: "string" },
+      title: { type: "string" },
+      description: nullableString,
+      startDate: nullableString,
+      endDate: nullableString,
+      sendStatus: { type: "string" },
+      isArchived: { type: "boolean" },
+      ended: { type: "boolean" },
+      readOnly: { type: "boolean" },
+      receiverStatus: {
+        type: "string",
+        enum: ["active", "in_progress", "completed", "ended", "archived"],
+      },
+      cta: { type: "string" },
+      questions: {
+        type: "array",
+        items: { $ref: "SurveyQuestionDto#" },
+      },
+      response: {
+        anyOf: [{ $ref: "SurveyResponseDto#" }, { type: "null" }],
+      },
+    },
+  });
 }
