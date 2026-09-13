@@ -1502,4 +1502,186 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       },
     },
   });
+
+  app.addSchema({
+    $id: "TicketPersonDto",
+    type: "object",
+    required: ["userId", "firstName", "lastName", "role", "figappId"],
+    properties: {
+      userId: { type: "string" },
+      firstName: nullableString,
+      lastName: nullableString,
+      role: nullableString,
+      figappId: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "TicketAttachmentDto",
+    type: "object",
+    required: [
+      "id",
+      "fileName",
+      "fileSize",
+      "fileType",
+      "storagePath",
+      "bucket",
+      "uploadedBy",
+      "createdAt",
+    ],
+    properties: {
+      id: { type: "string" },
+      fileName: { type: "string" },
+      fileSize: { type: "integer" },
+      fileType: { type: "string" },
+      storagePath: { type: "string" },
+      bucket: { type: "string" },
+      uploadedBy: { type: "string" },
+      createdAt: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "TicketMessageDto",
+    type: "object",
+    required: [
+      "id",
+      "body",
+      "authorId",
+      "createdAt",
+      "author",
+      "attachments",
+    ],
+    properties: {
+      id: { type: "string" },
+      body: { type: "string" },
+      authorId: { type: "string" },
+      createdAt: nullableString,
+      author: {
+        anyOf: [{ $ref: "TicketPersonDto#" }, { type: "null" }],
+      },
+      attachments: {
+        type: "array",
+        items: { $ref: "TicketAttachmentDto#" },
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: "TicketListItemDto",
+    type: "object",
+    required: [
+      "id",
+      "subject",
+      "description",
+      "priority",
+      "status",
+      "displayStatus",
+      "escalated",
+      "ticketType",
+      "messageCount",
+      "createdAt",
+      "updatedAt",
+      "creator",
+    ],
+    properties: {
+      id: { type: "string" },
+      subject: { type: "string" },
+      description: nullableString,
+      priority: { type: "string" },
+      status: {
+        type: "string",
+        enum: [
+          "open",
+          "in_progress",
+          "resolved",
+          "verified",
+          "closed",
+          "reopened",
+        ],
+      },
+      displayStatus: { type: "string" },
+      escalated: { type: "boolean" },
+      ticketType: { type: "string" },
+      messageCount: { type: "integer" },
+      createdAt: nullableString,
+      updatedAt: nullableString,
+      creator: {
+        anyOf: [{ $ref: "TicketPersonDto#" }, { type: "null" }],
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: "TicketListDto",
+    type: "object",
+    required: ["items"],
+    properties: {
+      items: {
+        type: "array",
+        items: { $ref: "TicketListItemDto#" },
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: "TicketDetailDto",
+    type: "object",
+    required: [
+      "id",
+      "subject",
+      "description",
+      "priority",
+      "status",
+      "displayStatus",
+      "escalated",
+      "ticketType",
+      "agencyId",
+      "createdBy",
+      "assignedTo",
+      "createdAt",
+      "updatedAt",
+      "resolvedAt",
+      "creator",
+      "attachments",
+      "messages",
+    ],
+    properties: {
+      id: { type: "string" },
+      subject: { type: "string" },
+      description: nullableString,
+      priority: { type: "string" },
+      status: {
+        type: "string",
+        enum: [
+          "open",
+          "in_progress",
+          "resolved",
+          "verified",
+          "closed",
+          "reopened",
+        ],
+      },
+      displayStatus: { type: "string" },
+      escalated: { type: "boolean" },
+      ticketType: { type: "string" },
+      agencyId: nullableString,
+      createdBy: { type: "string" },
+      assignedTo: nullableString,
+      createdAt: nullableString,
+      updatedAt: nullableString,
+      resolvedAt: nullableString,
+      creator: {
+        anyOf: [{ $ref: "TicketPersonDto#" }, { type: "null" }],
+      },
+      attachments: {
+        type: "array",
+        items: { $ref: "TicketAttachmentDto#" },
+      },
+      messages: {
+        type: "array",
+        items: { $ref: "TicketMessageDto#" },
+      },
+    },
+  });
 }
