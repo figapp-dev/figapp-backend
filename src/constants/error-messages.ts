@@ -97,6 +97,11 @@ export const ErrorMessages = {
   HOUSEHOLD_NOT_FOUND: "Household not found",
   HOUSEHOLD_LOAD_FAILED: "Failed to load household",
 
+  PLACEMENTS_LIST_LOAD_FAILED: "Failed to load placements",
+  PLACEMENT_NOT_FOUND: "Placement not found",
+  PLACEMENT_LOAD_FAILED: "Failed to load placement",
+  PLACEMENT_INVALID_QUERY: "kind must be child or placed_parent",
+
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",
