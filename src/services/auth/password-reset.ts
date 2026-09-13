@@ -85,14 +85,12 @@ export async function requestPasswordReset(emailRaw: string) {
   const hashedToken = linkData.properties.hashed_token?.trim();
   const actionLink = linkData.properties.action_link?.trim();
 
-  // Prefer Supabase's hosted verify URL (action_link). It sets a recovery
-  // session then redirects to WEB_APP_URL/auth?mode=reset with tokens.
-  // Fall back to a token_hash deep link the SPA can verifyOtp itself.
-  const resetUrl =
-    actionLink ||
-    (hashedToken
-      ? `${env.webAppUrl}/auth?token_hash=${encodeURIComponent(hashedToken)}&type=recovery&mode=reset`
-      : null);
+  // Brand-facing link on figapp.co.uk (not *.supabase.co). The web app
+  // calls verifyOtp with token_hash, then shows the set-password form.
+  // Fall back to action_link only if hashed_token is missing.
+  const resetUrl = hashedToken
+    ? `${env.webAppUrl}/auth?token_hash=${encodeURIComponent(hashedToken)}&type=recovery&mode=reset`
+    : actionLink;
 
   if (!resetUrl) {
     return serviceSuccess({ ok: true as const, message: GENERIC_MESSAGE });
