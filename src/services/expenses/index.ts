@@ -39,11 +39,12 @@ const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 function normalizeAttachments(
   files: ExpenseAttachmentInput[] | undefined,
-  userId: string,
+  claimId: string,
 ): { files: ExpenseAttachmentInput[]; badRequest: boolean } {
   if (!files || files.length === 0) return { files: [], badRequest: false };
   if (files.length > MAX_ATTACHMENTS) return { files: [], badRequest: true };
 
+  const prefix = `${claimId}/`;
   const normalized: ExpenseAttachmentInput[] = [];
   for (const file of files) {
     const fileName = file.fileName?.trim() ?? "";
@@ -54,7 +55,7 @@ function normalizeAttachments(
         ? Math.max(0, Math.floor(file.fileSize))
         : 0;
     if (!fileName || !storagePath) return { files: [], badRequest: true };
-    if (!storagePath.startsWith(`${userId}/`)) {
+    if (!storagePath.startsWith(prefix)) {
       return { files: [], badRequest: true };
     }
     if (fileSize > MAX_ATTACHMENT_BYTES) return { files: [], badRequest: true };
@@ -199,8 +200,8 @@ export async function createExpenseForCarer(
     return serviceFailure({ badRequest: true });
   }
 
-  const attachments = normalizeAttachments(body.attachments, userId);
-  if (attachments.badRequest) return serviceFailure({ badRequest: true });
+  // Attachments must be uploaded under `{claimId}/...` (storage RLS), so they
+  // are registered after create via PUT /expenses/:id — same as the web app.
 
   const agency = await findAgencyIdForUser(supabase, userId);
   if (agency.error) return serviceFailure({ error: agency.error });
@@ -234,16 +235,6 @@ export async function createExpenseForCarer(
     return serviceFailure({
       error: inserted.error ?? new Error("Failed to create expense claim"),
     });
-  }
-
-  if (attachments.files.length > 0) {
-    const attach = await insertExpenseAttachments(
-      supabase,
-      inserted.data.id,
-      userId,
-      attachments.files,
-    );
-    if (attach.error) return serviceFailure({ error: attach.error });
   }
 
   return getExpenseForCarer(supabase, userId, inserted.data.id);
@@ -280,7 +271,7 @@ export async function updateExpenseForCarer(
     return serviceFailure({ badRequest: true });
   }
 
-  const attachments = normalizeAttachments(body.attachments, userId);
+  const attachments = normalizeAttachments(body.attachments, id);
   if (attachments.badRequest) return serviceFailure({ badRequest: true });
 
   const { householdIds, error: householdError } = await getActiveHouseholdIds(

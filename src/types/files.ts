@@ -6,7 +6,7 @@
  * - life_story → child id (same as GET /children/:id)
  * - child_document → child id (same as GET /children/:id)
  * - ticket → caller user id (path is always `{userId}/{uuid}_{fileName}`)
- * - expense → caller user id (path is always `{userId}/{uuid}_{fileName}`)
+ * - expense → expense claim id (path is always `{claimId}/{uuid}_{fileName}`)
  */
 export type FileResource =
   | "daily_log"
