@@ -111,6 +111,17 @@ export const ErrorMessages = {
   TICKET_ACCESS_DENIED: "You do not have access to this support ticket",
   TICKET_NO_AGENCY: "You must belong to an agency to create a support ticket",
 
+  SURVEYS_LIST_LOAD_FAILED: "Failed to load surveys",
+  SURVEY_NOT_FOUND: "Survey not found",
+  SURVEY_LOAD_FAILED: "Failed to load survey",
+  SURVEY_SAVE_FAILED: "Failed to save survey response",
+  SURVEY_SUBMIT_FAILED: "Failed to submit survey response",
+  SURVEY_INVALID_BODY: "Invalid survey response",
+  SURVEY_ACCESS_DENIED: "You do not have access to this survey",
+  SURVEY_NOT_EDITABLE: "This survey no longer accepts responses",
+  SURVEY_REQUIRED_MISSING: "Please answer all required questions",
+  SURVEY_NO_AGENCY: "You must belong to an agency to answer surveys",
+
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",
