@@ -1351,4 +1351,155 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       },
     },
   });
+
+  app.addSchema({
+    $id: "PlacementLinkedChildDto",
+    type: "object",
+    required: ["id", "displayName", "figappId"],
+    properties: {
+      id: { type: "string" },
+      displayName: { type: "string" },
+      figappId: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "PlacementSubjectDto",
+    type: "object",
+    required: [
+      "id",
+      "displayName",
+      "figappId",
+      "dateOfBirth",
+      "relationship",
+      "linkedChild",
+    ],
+    properties: {
+      id: { type: "string" },
+      displayName: { type: "string" },
+      figappId: nullableString,
+      dateOfBirth: nullableString,
+      relationship: nullableString,
+      linkedChild: {
+        anyOf: [{ $ref: "PlacementLinkedChildDto#" }, { type: "null" }],
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: "PlacementHouseholdSummaryDto",
+    type: "object",
+    required: [
+      "id",
+      "name",
+      "figappId",
+      "addressLine1",
+      "city",
+      "postalCode",
+    ],
+    properties: {
+      id: { type: "string" },
+      name: nullableString,
+      figappId: nullableString,
+      addressLine1: nullableString,
+      city: nullableString,
+      postalCode: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "PlacementFosterCarerDto",
+    type: "object",
+    required: ["userId", "displayName", "figappId"],
+    properties: {
+      userId: { type: "string" },
+      displayName: { type: "string" },
+      figappId: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "PlacementListItemDto",
+    type: "object",
+    required: [
+      "id",
+      "kind",
+      "status",
+      "startDate",
+      "endDate",
+      "isActive",
+      "notes",
+      "placementTypeNames",
+      "child",
+      "household",
+    ],
+    properties: {
+      id: { type: "string" },
+      kind: { type: "string", enum: ["child", "placed_parent"] },
+      status: {
+        anyOf: [
+          { type: "string", enum: ["Active", "Scheduled", "Ended"] },
+          { type: "null" },
+        ],
+      },
+      startDate: nullableString,
+      endDate: nullableString,
+      isActive: { type: "boolean" },
+      notes: nullableString,
+      placementTypeNames: { type: "array", items: { type: "string" } },
+      child: { $ref: "PlacementSubjectDto#" },
+      household: { $ref: "PlacementHouseholdSummaryDto#" },
+    },
+  });
+
+  app.addSchema({
+    $id: "PlacementListDto",
+    type: "object",
+    required: ["items"],
+    properties: {
+      items: {
+        type: "array",
+        items: { $ref: "PlacementListItemDto#" },
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: "PlacementDetailDto",
+    type: "object",
+    required: [
+      "id",
+      "kind",
+      "status",
+      "startDate",
+      "endDate",
+      "isActive",
+      "notes",
+      "placementTypeNames",
+      "child",
+      "household",
+      "fosterCarers",
+    ],
+    properties: {
+      id: { type: "string" },
+      kind: { type: "string", enum: ["child", "placed_parent"] },
+      status: {
+        anyOf: [
+          { type: "string", enum: ["Active", "Scheduled", "Ended"] },
+          { type: "null" },
+        ],
+      },
+      startDate: nullableString,
+      endDate: nullableString,
+      isActive: { type: "boolean" },
+      notes: nullableString,
+      placementTypeNames: { type: "array", items: { type: "string" } },
+      child: { $ref: "PlacementSubjectDto#" },
+      household: { $ref: "PlacementHouseholdSummaryDto#" },
+      fosterCarers: {
+        type: "array",
+        items: { $ref: "PlacementFosterCarerDto#" },
+      },
+    },
+  });
 }
