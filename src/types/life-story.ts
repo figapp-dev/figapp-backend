@@ -72,3 +72,15 @@ export type AddLifeStoryEntryBody = {
     contentType?: string;
   };
 };
+
+/** PATCH body — omit fields to leave unchanged. clearMedia drops existing photo. */
+export type UpdateLifeStoryEntryBody = {
+  section?: string;
+  notes?: string;
+  media?: {
+    path: string;
+    name: string;
+    contentType?: string;
+  };
+  clearMedia?: boolean;
+};
