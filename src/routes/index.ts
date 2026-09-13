@@ -16,9 +16,11 @@ import { placementsRoute } from "./placements.js";
 import { ticketsRoute } from "./tickets.js";
 import { surveysRoute } from "./surveys.js";
 import { expensesRoute } from "./expenses.js";
+import { authRoute } from "./auth.js";
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(healthRoute);
+  await app.register(authRoute);
   await app.register(gocardlessWebhookRoute);
   await app.register(billingCollectRoute);
   await app.register(profileRoute);

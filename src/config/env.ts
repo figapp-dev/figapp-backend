@@ -79,4 +79,16 @@ export const env = {
   /** Optional Resend key for dunning mail. Collect still suspends without it. */
   resendApiKey: process.env.RESEND_API_KEY?.trim() || "",
   billingFromEmail: process.env.BILLING_FROM_EMAIL?.trim() || "",
+  /**
+   * From-address for auth/transactional mail (password reset, etc.).
+   * Falls back to billing from-address, then FigApp no-reply.
+   */
+  mailFromEmail:
+    process.env.MAIL_FROM_EMAIL?.trim() ||
+    process.env.BILLING_FROM_EMAIL?.trim() ||
+    "FigApp <no-reply@figapp.co.uk>",
+  /** Public web app origin for password-reset links in emails. */
+  webAppUrl: (
+    process.env.WEB_APP_URL?.trim() || "https://www.figapp.co.uk"
+  ).replace(/\/+$/, ""),
 } as const;
