@@ -1827,4 +1827,185 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       },
     },
   });
+
+  app.addSchema({
+    $id: "ExpensePersonDto",
+    type: "object",
+    required: ["id", "displayName", "figappId"],
+    properties: {
+      id: { type: "string" },
+      displayName: { type: "string" },
+      figappId: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "ExpenseAttachmentDto",
+    type: "object",
+    required: [
+      "id",
+      "fileName",
+      "filePath",
+      "fileSize",
+      "fileType",
+      "bucket",
+      "uploadedBy",
+      "createdAt",
+    ],
+    properties: {
+      id: { type: "string" },
+      fileName: { type: "string" },
+      filePath: { type: "string" },
+      fileSize: { type: "integer" },
+      fileType: { type: "string" },
+      bucket: { type: "string" },
+      uploadedBy: { type: "string" },
+      createdAt: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "ExpenseCommentDto",
+    type: "object",
+    required: [
+      "id",
+      "body",
+      "activityType",
+      "authorId",
+      "authorName",
+      "createdAt",
+    ],
+    properties: {
+      id: { type: "string" },
+      body: { type: "string" },
+      activityType: { type: "string" },
+      authorId: { type: "string" },
+      authorName: nullableString,
+      createdAt: nullableString,
+    },
+  });
+
+  app.addSchema({
+    $id: "ExpenseClaimListItemDto",
+    type: "object",
+    required: [
+      "id",
+      "expenseDate",
+      "amount",
+      "description",
+      "status",
+      "displayStatus",
+      "child",
+      "fosterCarer",
+      "createdAt",
+      "updatedAt",
+      "canEdit",
+    ],
+    properties: {
+      id: { type: "string" },
+      expenseDate: { type: "string" },
+      amount: { type: "number" },
+      description: nullableString,
+      status: {
+        type: "string",
+        enum: ["new", "approved", "declined", "paid"],
+      },
+      displayStatus: { type: "string" },
+      child: {
+        anyOf: [{ $ref: "ExpensePersonDto#" }, { type: "null" }],
+      },
+      fosterCarer: {
+        anyOf: [{ $ref: "ExpensePersonDto#" }, { type: "null" }],
+      },
+      createdAt: { type: "string" },
+      updatedAt: { type: "string" },
+      canEdit: { type: "boolean" },
+    },
+  });
+
+  app.addSchema({
+    $id: "ExpenseClaimsSummaryDto",
+    type: "object",
+    required: [
+      "totalClaims",
+      "newClaims",
+      "approvedClaims",
+      "totalAmount",
+    ],
+    properties: {
+      totalClaims: { type: "integer" },
+      newClaims: { type: "integer" },
+      approvedClaims: { type: "integer" },
+      totalAmount: { type: "number" },
+    },
+  });
+
+  app.addSchema({
+    $id: "ExpenseClaimsListDto",
+    type: "object",
+    required: ["items", "summary"],
+    properties: {
+      items: {
+        type: "array",
+        items: { $ref: "ExpenseClaimListItemDto#" },
+      },
+      summary: { $ref: "ExpenseClaimsSummaryDto#" },
+    },
+  });
+
+  app.addSchema({
+    $id: "ExpenseClaimDetailDto",
+    type: "object",
+    required: [
+      "id",
+      "expenseDate",
+      "amount",
+      "description",
+      "status",
+      "displayStatus",
+      "child",
+      "fosterCarer",
+      "createdAt",
+      "updatedAt",
+      "canEdit",
+      "agencyId",
+      "rejectionReason",
+      "reviewedAt",
+      "paidAt",
+      "attachments",
+      "comments",
+    ],
+    properties: {
+      id: { type: "string" },
+      expenseDate: { type: "string" },
+      amount: { type: "number" },
+      description: nullableString,
+      status: {
+        type: "string",
+        enum: ["new", "approved", "declined", "paid"],
+      },
+      displayStatus: { type: "string" },
+      child: {
+        anyOf: [{ $ref: "ExpensePersonDto#" }, { type: "null" }],
+      },
+      fosterCarer: {
+        anyOf: [{ $ref: "ExpensePersonDto#" }, { type: "null" }],
+      },
+      createdAt: { type: "string" },
+      updatedAt: { type: "string" },
+      canEdit: { type: "boolean" },
+      agencyId: { type: "string" },
+      rejectionReason: nullableString,
+      reviewedAt: nullableString,
+      paidAt: nullableString,
+      attachments: {
+        type: "array",
+        items: { $ref: "ExpenseAttachmentDto#" },
+      },
+      comments: {
+        type: "array",
+        items: { $ref: "ExpenseCommentDto#" },
+      },
+    },
+  });
 }

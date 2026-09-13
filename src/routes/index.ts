@@ -15,6 +15,7 @@ import { householdsRoute } from "./households.js";
 import { placementsRoute } from "./placements.js";
 import { ticketsRoute } from "./tickets.js";
 import { surveysRoute } from "./surveys.js";
+import { expensesRoute } from "./expenses.js";
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(healthRoute);
@@ -33,4 +34,5 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(placementsRoute);
   await app.register(ticketsRoute);
   await app.register(surveysRoute);
+  await app.register(expensesRoute);
 }

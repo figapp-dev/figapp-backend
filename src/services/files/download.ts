@@ -13,6 +13,10 @@ import {
   findTicketAttachmentByPath,
   findTicketByIdForCreator,
 } from "../../repositories/tickets.js";
+import {
+  findExpenseAttachmentByPath,
+  findExpenseClaimByIdForCarer,
+} from "../../repositories/expenses.js";
 import type { SignedUrlDto } from "../../types/files.js";
 import { assertChildAccessibleToCarer } from "../children/shared.js";
 import { getDailyLogAssignmentForCarer } from "./access.js";
@@ -89,6 +93,20 @@ export async function createSignedDownloadUrl(
       return serviceFailure({ error: ticketAccess.error });
     }
     if (!ticketAccess.allowed) {
+      return serviceFailure({ forbidden: true });
+    }
+  }
+
+  if (bucket === STORAGE_BUCKETS.EXPENSE_ATTACHMENTS) {
+    const expenseAccess = await authorizeExpenseAttachmentDownload(
+      supabase,
+      userId,
+      path,
+    );
+    if (expenseAccess.error) {
+      return serviceFailure({ error: expenseAccess.error });
+    }
+    if (!expenseAccess.allowed) {
       return serviceFailure({ forbidden: true });
     }
   }
@@ -191,4 +209,26 @@ async function authorizeTicketAttachmentDownload(
   );
   if (ticket.error) return { allowed: false, error: ticket.error };
   return { allowed: ticket.data != null, error: null };
+}
+
+async function authorizeExpenseAttachmentDownload(
+  supabase: SupabaseClient,
+  userId: string,
+  path: string,
+): Promise<{ allowed: boolean; error: Error | null }> {
+  if (path.startsWith(`${userId}/`)) {
+    return { allowed: true, error: null };
+  }
+
+  const { data, error } = await findExpenseAttachmentByPath(supabase, path);
+  if (error) return { allowed: false, error };
+  if (!data) return { allowed: false, error: null };
+
+  const claim = await findExpenseClaimByIdForCarer(
+    supabase,
+    data.expense_claim_id,
+    userId,
+  );
+  if (claim.error) return { allowed: false, error: claim.error };
+  return { allowed: claim.data != null, error: null };
 }

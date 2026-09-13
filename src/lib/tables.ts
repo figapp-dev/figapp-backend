@@ -49,4 +49,8 @@ export const TABLES = {
   SURVEYS: "surveys",
   SURVEY_QUESTIONS: "survey_questions",
   SURVEY_RESPONSES: "survey_responses",
+
+  EXPENSE_CLAIMS: "expense_claims",
+  EXPENSE_CLAIM_ATTACHMENTS: "expense_claim_attachments",
+  EXPENSE_CLAIM_ACTIVITIES: "expense_claim_activities",
 } as const;
