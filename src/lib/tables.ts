@@ -53,4 +53,6 @@ export const TABLES = {
   EXPENSE_CLAIMS: "expense_claims",
   EXPENSE_CLAIM_ATTACHMENTS: "expense_claim_attachments",
   EXPENSE_CLAIM_ACTIVITIES: "expense_claim_activities",
+
+  GDPR_CONSENT: "gdpr_consent",
 } as const;
