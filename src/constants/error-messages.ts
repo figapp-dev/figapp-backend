@@ -6,6 +6,7 @@ export const ErrorMessages = {
   CONFLICT: "Conflict",
   INTERNAL_ERROR: "Internal server error",
   PASSWORD_RESET_FAILED: "Could not send password reset email",
+  ACCOUNT_DELETE_FAILED: "Could not delete account",
 
   MISSING_AUTH_HEADER: "Missing or invalid Authorization header",
   MISSING_ACCESS_TOKEN: "Missing access token",
