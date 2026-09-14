@@ -18,6 +18,7 @@ import { surveysRoute } from "./surveys.js";
 import { expensesRoute } from "./expenses.js";
 import { authRoute } from "./auth.js";
 import { accountRoute } from "./account.js";
+import { gdprConsentRoute } from "./gdpr-consent.js";
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(healthRoute);
@@ -26,6 +27,7 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(billingCollectRoute);
   await app.register(profileRoute);
   await app.register(accountRoute);
+  await app.register(gdprConsentRoute);
   await app.register(childrenRoute);
   await app.register(dailyLogsRoute);
   await app.register(filesRoute);

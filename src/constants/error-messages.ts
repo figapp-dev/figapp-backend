@@ -7,6 +7,8 @@ export const ErrorMessages = {
   INTERNAL_ERROR: "Internal server error",
   PASSWORD_RESET_FAILED: "Could not send password reset email",
   ACCOUNT_DELETE_FAILED: "Could not delete account",
+  GDPR_CONSENT_LOAD_FAILED: "Failed to load consent status",
+  GDPR_CONSENT_SAVE_FAILED: "Failed to save consent",
 
   MISSING_AUTH_HEADER: "Missing or invalid Authorization header",
   MISSING_ACCESS_TOKEN: "Missing access token",
