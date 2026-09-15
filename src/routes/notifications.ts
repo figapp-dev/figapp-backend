@@ -217,7 +217,7 @@ export async function notificationsRoute(app: FastifyInstance) {
         params: {
           type: "object",
           required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
+          properties: { id: { type: "string", minLength: 1 } },
         },
         response: {
           200: notificationDtoSchema,
