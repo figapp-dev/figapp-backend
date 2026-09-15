@@ -55,4 +55,7 @@ export const TABLES = {
   EXPENSE_CLAIM_ACTIVITIES: "expense_claim_activities",
 
   GDPR_CONSENT: "gdpr_consent",
+
+  NOTIFICATIONS: "notifications",
+  NOTIFICATION_PREFERENCES: "notification_preferences",
 } as const;
