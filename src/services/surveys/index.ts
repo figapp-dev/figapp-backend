@@ -11,6 +11,7 @@ import {
   findAgencyUserContext,
   findResponseForSend,
   findSurveyIdForTemplate,
+  findSurveySendAccessById,
   findSurveySendById,
   insertSurveyResponse,
   listQuestionsForSurvey,
@@ -107,13 +108,20 @@ export async function getSurveyForCarer(
   if (ctx.error) return serviceFailure({ error: ctx.error });
   if (!ctx.agencyId) return serviceFailure({ forbidden: true });
 
+  // Lean ACL probe first (no template join) so unassigned sends 403 quickly.
+  const access = await findSurveySendAccessById(supabase, id);
+  if (access.error) return serviceFailure({ error: access.error });
+  if (!access.data || access.data.agency_id !== ctx.agencyId) {
+    return serviceFailure({ notFound: true });
+  }
+  if (!isAssignedToCarer(access.data, userId, ctx.role)) {
+    return serviceFailure({ forbidden: true });
+  }
+
   const send = await findSurveySendById(supabase, id);
   if (send.error) return serviceFailure({ error: send.error });
   if (!send.data || send.data.agency_id !== ctx.agencyId) {
     return serviceFailure({ notFound: true });
-  }
-  if (!isAssignedToCarer(send.data, userId, ctx.role)) {
-    return serviceFailure({ forbidden: true });
   }
 
   const [response, questions] = await Promise.all([
