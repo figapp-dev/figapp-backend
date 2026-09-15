@@ -9,6 +9,11 @@ export const ErrorMessages = {
   ACCOUNT_DELETE_FAILED: "Could not delete account",
   GDPR_CONSENT_LOAD_FAILED: "Failed to load consent status",
   GDPR_CONSENT_SAVE_FAILED: "Failed to save consent",
+  NOTIFICATIONS_LOAD_FAILED: "Failed to load notifications",
+  NOTIFICATION_NOT_FOUND: "Notification not found",
+  NOTIFICATION_READ_FAILED: "Failed to update notification",
+  NOTIFICATION_PREFS_LOAD_FAILED: "Failed to load notification preferences",
+  NOTIFICATION_PREFS_SAVE_FAILED: "Failed to save notification preferences",
 
   MISSING_AUTH_HEADER: "Missing or invalid Authorization header",
   MISSING_ACCESS_TOKEN: "Missing access token",
