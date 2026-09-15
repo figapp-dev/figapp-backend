@@ -47,7 +47,7 @@ export function isAfterEndDate(endDate: string | null | undefined): boolean {
 }
 
 export function isAssignedToCarer(
-  send: SurveySendRow,
+  send: Pick<SurveySendRow, "audience_target" | "recipients_json">,
   userId: string,
   role: string | null,
 ): boolean {

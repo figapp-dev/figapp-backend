@@ -92,6 +92,31 @@ export async function listSurveySendsForAgency(
   };
 }
 
+export async function findSurveySendAccessById(
+  supabase: SupabaseClient,
+  sendId: string,
+): Promise<{
+  data: Pick<
+    SurveySendRow,
+    "id" | "agency_id" | "audience_target" | "recipients_json"
+  > | null;
+  error: Error | null;
+}> {
+  const { data, error } = await supabase
+    .from(TABLES.SURVEY_SENDS)
+    .select("id, agency_id, audience_target, recipients_json")
+    .eq("id", sendId)
+    .maybeSingle();
+
+  return {
+    data: (data as Pick<
+      SurveySendRow,
+      "id" | "agency_id" | "audience_target" | "recipients_json"
+    > | null) ?? null,
+    error,
+  };
+}
+
 export async function findSurveySendById(
   supabase: SupabaseClient,
   sendId: string,
