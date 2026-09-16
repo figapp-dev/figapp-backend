@@ -12,6 +12,9 @@ export const ErrorMessages = {
   NOTIFICATIONS_LOAD_FAILED: "Failed to load notifications",
   NOTIFICATION_NOT_FOUND: "Notification not found",
   NOTIFICATION_READ_FAILED: "Failed to update notification",
+  FCM_TOKEN_REGISTER_FAILED: "Failed to register this device for notifications",
+  FCM_TOKEN_UNREGISTER_FAILED:
+    "Failed to remove this device from notifications",
   NOTIFICATION_PREFS_LOAD_FAILED: "Failed to load notification preferences",
   NOTIFICATION_PREFS_SAVE_FAILED: "Failed to save notification preferences",
 

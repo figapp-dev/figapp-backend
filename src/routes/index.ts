@@ -20,6 +20,7 @@ import { authRoute } from "./auth.js";
 import { accountRoute } from "./account.js";
 import { gdprConsentRoute } from "./gdpr-consent.js";
 import { notificationsRoute } from "./notifications.js";
+import { fcmRoute } from "./fcm.js";
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(healthRoute);
@@ -30,6 +31,7 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(accountRoute);
   await app.register(gdprConsentRoute);
   await app.register(notificationsRoute);
+  await app.register(fcmRoute);
   await app.register(childrenRoute);
   await app.register(dailyLogsRoute);
   await app.register(filesRoute);
