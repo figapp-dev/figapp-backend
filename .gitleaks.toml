@@ -1,0 +1,22 @@
+title = "FigApp gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supabase-legacy-jwt"
+description = "Supabase legacy anon/service_role JWT"
+regex = '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSI[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'''
+tags = ["supabase", "jwt"]
+
+[[rules]]
+id = "supabase-secret-key"
+description = "Supabase new-style secret key (sb_secret_...)"
+regex = '''sb_secret_[A-Za-z0-9_]+'''
+tags = ["supabase", "secret"]
+
+[allowlist]
+description = "Supabase publishable keys are meant to be public"
+regexes = [
+  '''sb_publishable_[A-Za-z0-9_]+''',
+]
