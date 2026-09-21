@@ -52,8 +52,7 @@ export async function invokeTicketNotify(
   }
 }
 
-/** After create. For carer-created tickets the edge function may no-op
- *  (it only fans out platform-admin support creates) — still call for parity. */
+/** After create — platform support tickets and agency (carer) tickets. */
 export async function notifyTicketCreated(
   supabase: SupabaseClient,
   ticket: TicketRow,
