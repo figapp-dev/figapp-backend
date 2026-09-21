@@ -74,7 +74,20 @@ export async function dailyLogRemindersRoute(app: FastifyInstance) {
       assertCronAuthorized(request.headers);
       try {
         const supabase = createServiceRoleClient();
-        return await runWeeklySocialWorkerReminders(supabase);
+        const result = await runWeeklySocialWorkerReminders(supabase);
+        request.log.info(
+          {
+            kind: result.kind,
+            periodKey: result.periodKey,
+            candidates: result.candidates,
+            notified: result.notified,
+            emailed: result.emailed,
+            skippedZero: result.skippedZero,
+            skippedDuplicate: result.skippedDuplicate,
+          },
+          "daily-log weekly SW reminders finished",
+        );
+        return result;
       } catch (error) {
         request.log.error(error);
         throw internalError(ErrorMessages.DAILY_LOG_REMINDERS_FAILED);
@@ -104,7 +117,20 @@ export async function dailyLogRemindersRoute(app: FastifyInstance) {
       assertCronAuthorized(request.headers);
       try {
         const supabase = createServiceRoleClient();
-        return await runMonthlySwManagerReminders(supabase);
+        const result = await runMonthlySwManagerReminders(supabase);
+        request.log.info(
+          {
+            kind: result.kind,
+            periodKey: result.periodKey,
+            candidates: result.candidates,
+            notified: result.notified,
+            emailed: result.emailed,
+            skippedZero: result.skippedZero,
+            skippedDuplicate: result.skippedDuplicate,
+          },
+          "daily-log monthly SW manager reminders finished",
+        );
+        return result;
       } catch (error) {
         request.log.error(error);
         throw internalError(ErrorMessages.DAILY_LOG_REMINDERS_FAILED);

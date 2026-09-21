@@ -28,3 +28,5 @@ jobs:
           curl --fail-with-body -sS -X POST \
             "${FIGAPP_API_URL%/}/internal/daily-logs/remind-social-workers" \
             -H "x-cron-secret: ${SECRET}"
+          echo
+          echo "Remind social workers finished (see Railway logs for details)."
