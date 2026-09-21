@@ -76,6 +76,14 @@ export const env = {
    * Optional at boot; the collect route returns 500 until it is set.
    */
   billingCronSecret: process.env.BILLING_CRON_SECRET?.trim() || "",
+  /**
+   * Shared secret for internal cron POSTs (daily-log reminders, etc.).
+   * Falls back to BILLING_CRON_SECRET so one Railway/GitHub secret can cover both.
+   */
+  cronSecret:
+    process.env.CRON_SECRET?.trim() ||
+    process.env.BILLING_CRON_SECRET?.trim() ||
+    "",
   /** Optional Resend key for dunning mail. Collect still suspends without it. */
   resendApiKey: process.env.RESEND_API_KEY?.trim() || "",
   billingFromEmail: process.env.BILLING_FROM_EMAIL?.trim() || "",

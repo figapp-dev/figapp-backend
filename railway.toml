@@ -7,7 +7,8 @@
 #   SUPABASE_PUBLISHABLE_KEY
 #   SUPABASE_SERVICE_ROLE_KEY (billing writes / webhooks)
 #   GOCARDLESS_ACCESS_TOKEN / GOCARDLESS_WEBHOOK_SECRET / GOCARDLESS_ENV
-#   BILLING_CRON_SECRET — Railway Cron POST /internal/billing/collect
+#   BILLING_CRON_SECRET — Railway Cron / GitHub Actions POST /internal/billing/collect
+#   CRON_SECRET — optional; daily-log reminder crons (falls back to BILLING_CRON_SECRET)
 #   PORT is injected by Railway
 
 [build]

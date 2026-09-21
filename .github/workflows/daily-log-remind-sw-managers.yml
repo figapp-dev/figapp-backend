@@ -1,0 +1,30 @@
+# Monthly: overdue daily-log reminders for SW managers.
+# POST /internal/daily-logs/remind-sw-managers on the deployed API.
+# Cron is UTC (1st of month 09:00).
+name: Daily log remind SW managers
+
+on:
+  schedule:
+    - cron: "0 9 1 * *"
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Remind SW managers
+        env:
+          FIGAPP_API_URL: ${{ secrets.FIGAPP_API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BILLING_CRON_SECRET: ${{ secrets.BILLING_CRON_SECRET }}
+        run: |
+          set -eu
+          SECRET="${CRON_SECRET:-${BILLING_CRON_SECRET:-}}"
+          if [ -z "${FIGAPP_API_URL:-}" ] || [ -z "${SECRET}" ]; then
+            echo "Missing FIGAPP_API_URL or CRON_SECRET/BILLING_CRON_SECRET repo secrets."
+            exit 1
+          fi
+          curl --fail-with-body -sS -X POST \
+            "${FIGAPP_API_URL%/}/internal/daily-logs/remind-sw-managers" \
+            -H "x-cron-secret: ${SECRET}"
