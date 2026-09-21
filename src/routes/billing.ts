@@ -17,6 +17,7 @@ import {
   notFound,
 } from "../lib/errors.js";
 import { ErrorMessages } from "../constants/error-messages.js";
+import { friendlyGoCardlessStartError } from "../lib/gocardless-customer.js";
 import { createBillingRequestBodySchema, billingExemptionBodySchema, seatChargeBodySchema, seatReductionBodySchema } from "../schemas/billing.js";
 import type {
   BillingExemptionBody,
@@ -141,8 +142,13 @@ export async function billingRoute(app: FastifyInstance) {
       if (result.conflict) {
         throw conflict(ErrorMessages.BILLING_MANDATE_EXISTS);
       }
+      if (result.validationFailed) {
+        throw badRequest(friendlyGoCardlessStartError(result.error));
+      }
       if (result.badRequest) {
-        throw badRequest(ErrorMessages.BILLING_REDIRECT_URL_INVALID);
+        throw badRequest(
+          result.error?.message ?? ErrorMessages.BILLING_REDIRECT_URL_INVALID,
+        );
       }
       if (result.error || !result.data) {
         request.log.error(
