@@ -8,6 +8,7 @@ import { figChatRoute } from "./figchat.js";
 import { lifeStoryRoute } from "./life-story.js";
 import { billingRoute } from "./billing.js";
 import { billingCollectRoute } from "./internal-billing.js";
+import { dailyLogRemindersRoute } from "./internal-daily-log-reminders.js";
 import { gocardlessWebhookRoute } from "./webhooks-gocardless.js";
 import { calendarRoute } from "./calendar.js";
 import { documentsRoute } from "./documents.js";
@@ -27,6 +28,7 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(authRoute);
   await app.register(gocardlessWebhookRoute);
   await app.register(billingCollectRoute);
+  await app.register(dailyLogRemindersRoute);
   await app.register(profileRoute);
   await app.register(accountRoute);
   await app.register(gdprConsentRoute);

@@ -86,6 +86,30 @@ describe("API smoke", () => {
     });
   });
 
+  it("POST /internal/daily-logs/remind-social-workers without cron secret returns 401", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/internal/daily-logs/remind-social-workers",
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toMatchObject({
+      statusCode: 401,
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  it("POST /internal/daily-logs/remind-sw-managers without cron secret returns 401", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/internal/daily-logs/remind-sw-managers",
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toMatchObject({
+      statusCode: 401,
+      code: "UNAUTHORIZED",
+    });
+  });
+
   it("POST /webhooks/gocardless without signature returns 401", async () => {
     const res = await app.inject({
       method: "POST",
