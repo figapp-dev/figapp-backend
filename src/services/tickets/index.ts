@@ -32,6 +32,7 @@ import type {
   TicketMessageDto,
   TicketPriority,
 } from "../../types/tickets.js";
+import { notifyTicketComment, notifyTicketCreated } from "./notify.js";
 
 const MAX_CREATE_ATTACHMENTS = 5;
 const MAX_COMMENT_ATTACHMENTS = 3;
@@ -246,6 +247,9 @@ export async function createTicketForCarer(
     }
   }
 
+  // Fire-and-forget: same edge function the web uses. Must not block create.
+  void notifyTicketCreated(supabase, row);
+
   return getTicketForCarer(supabase, userId, row.id);
 }
 
@@ -309,6 +313,9 @@ export async function addTicketCommentForCarer(
   }
 
   await touchTicketUpdatedAt(supabase, id);
+
+  // Fire-and-forget: notifies other participants (assignee / creator / thread).
+  void notifyTicketComment(supabase, message);
 
   return getTicketForCarer(supabase, userId, id);
 }
