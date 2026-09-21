@@ -152,6 +152,8 @@ export const ErrorMessages = {
   BILLING_ACCESS_LOAD_FAILED: "Failed to load billing access",
   BILLING_SUMMARY_LOAD_FAILED: "Failed to load billing summary",
   BILLING_REQUEST_FAILED: "Failed to start Direct Debit setup",
+  BILLING_ADDRESS_INCOMPLETE:
+    "GoCardless needs a complete UK address including postcode. Try again — the Direct Debit page can collect the address if it is missing.",
   BILLING_AGENCY_NOT_FOUND: "Agency not found",
   BILLING_FORBIDDEN: "Only the primary agency admin can manage billing",
   BILLING_EXEMPT: "This agency is billing-exempt and does not use GoCardless",

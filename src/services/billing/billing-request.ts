@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  InvalidApiUsageError,
+  ValidationFailedError,
+} from "gocardless-nodejs";
+import { ErrorMessages } from "../../constants/error-messages.js";
 import { isUsableMandateStatus } from "../../lib/billing-access.js";
 import { toError } from "../../lib/errors.js";
 import {
@@ -8,6 +13,10 @@ import {
   createOrFindOnIdempotencyConflict,
   getGoCardlessClient,
 } from "../../lib/gocardless.js";
+import {
+  goCardlessCustomerCreateParams,
+  goCardlessPrefilledCustomer,
+} from "../../lib/gocardless-customer.js";
 import { isAllowedRedirectUrl } from "../../lib/redirect-urls.js";
 import {
   serviceFailure,
@@ -42,11 +51,17 @@ export async function createAgencyBillingRequest(
   body: CreateBillingRequestBody,
 ): Promise<CreateBillingRequestResult> {
   if (!isAllowedRedirectUrl(body.successRedirectUrl)) {
-    return serviceFailure({ badRequest: true });
+    return serviceFailure({
+      badRequest: true,
+      error: new Error(ErrorMessages.BILLING_REDIRECT_URL_INVALID),
+    });
   }
   const exitUrl = body.exitRedirectUrl?.trim() || body.successRedirectUrl;
   if (!isAllowedRedirectUrl(exitUrl)) {
-    return serviceFailure({ badRequest: true });
+    return serviceFailure({
+      badRequest: true,
+      error: new Error(ErrorMessages.BILLING_REDIRECT_URL_INVALID),
+    });
   }
 
   const loaded = await loadManagedAgency(supabase, userId, agencyId);
@@ -80,42 +95,30 @@ export async function createAgencyBillingRequest(
 
   let gocardlessCustomerId = existingCustomer.data?.gocardless_customer_id ?? null;
 
+  const customerParams = goCardlessCustomerCreateParams(agency, billingEmail);
+
   if (!gocardlessCustomerId) {
     try {
       const customer = await createOrFindOnIdempotencyConflict(
-        () =>
-          gc.customers.create(
-            {
-              email: billingEmail ?? undefined,
-              company_name: agency.name,
-              country_code: "GB",
-              address_line1: agency.address_line1 ?? undefined,
-              city: agency.city ?? undefined,
-              postal_code: agency.postal_code ?? undefined,
-              metadata: { agency_id: agency.id },
-            },
-            `customer:${agency.id}`,
-          ),
+        () => gc.customers.create(customerParams, `customer:${agency.id}`),
         (id) => gc.customers.find(id),
       );
       gocardlessCustomerId = customer.id ?? null;
     } catch (error) {
+      if (
+        error instanceof ValidationFailedError ||
+        error instanceof InvalidApiUsageError
+      ) {
+        return goCardlessStartFailure(error);
+      }
       try {
         const customer = await gc.customers.create(
-          {
-            email: billingEmail ?? undefined,
-            company_name: agency.name,
-            country_code: "GB",
-            address_line1: agency.address_line1 ?? undefined,
-            city: agency.city ?? undefined,
-            postal_code: agency.postal_code ?? undefined,
-            metadata: { agency_id: agency.id },
-          },
+          customerParams,
           `customer:${agency.id}:${randomUUID()}`,
         );
         gocardlessCustomerId = customer.id ?? null;
       } catch (retryError) {
-        return serviceFailure({ error: toError(retryError) });
+        return goCardlessStartFailure(retryError);
       }
     }
 
@@ -149,11 +152,7 @@ export async function createAgencyBillingRequest(
       auto_fulfil: true,
       redirect_uri: body.successRedirectUrl,
       exit_uri: exitUrl,
-      prefilled_customer: {
-        company_name: agency.name,
-        email: billingEmail,
-        country_code: "GB",
-      },
+      prefilled_customer: goCardlessPrefilledCustomer(agency, billingEmail),
       links: { billing_request: billingRequest.id },
     });
 
@@ -183,6 +182,18 @@ export async function createAgencyBillingRequest(
       expiresAt: flow.expires_at ?? null,
     });
   } catch (error) {
-    return serviceFailure({ error: toError(error) });
+    return goCardlessStartFailure(error);
   }
+}
+
+function goCardlessStartFailure(error: unknown) {
+  const err = toError(error);
+  const isValidation =
+    error instanceof ValidationFailedError ||
+    error instanceof InvalidApiUsageError;
+  return serviceFailure({
+    error: err,
+    validationFailed: isValidation,
+    badRequest: isValidation,
+  });
 }
