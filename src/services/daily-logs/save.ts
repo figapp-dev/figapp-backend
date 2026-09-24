@@ -2,6 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { isDailyLogEditable } from "../../lib/daily-log-status.js";
 import { validateDailyLogSubmit } from "../../lib/daily-log-validation.js";
 import { timestampsMatch } from "../../lib/dates.js";
+import {
+  resolveEducationArrangementForLog,
+  withEducationArrangementSnapshot,
+} from "../../lib/education-arrangements.js";
 import { getActiveHouseholdIds } from "../../lib/households.js";
 import { isPlainObject } from "../../lib/objects.js";
 import { insertParentingAssessmentSection } from "../../lib/parenting-assessment.js";
@@ -63,11 +67,24 @@ export async function saveDailyLogForCarer(
   if ("failure" in loaded) return loaded.failure;
 
   const { row, existingLog } = loaded;
+  const existingDataJson =
+    (existingLog?.data_json as Record<string, unknown> | null) ?? null;
+
+  // Only fetch live when it's actually needed: submit validation always
+  // needs the effective arrangement, and a first-time create needs it once
+  // to freeze into the new log's snapshot (see below). A later "save" of an
+  // already-created draft needs neither -- its arrangement is already
+  // frozen (or, for a log saved before this existed, stays live-resolved
+  // every time until it's eventually submitted).
+  const liveEducationArrangement =
+    intent === "submit" || !existingLog
+      ? await loadEducationArrangement(supabase, row.child_id)
+      : null;
 
   if (intent === "submit") {
-    const educationArrangement = await loadEducationArrangement(
-      supabase,
-      row.child_id,
+    const educationArrangement = resolveEducationArrangementForLog(
+      existingDataJson,
+      liveEducationArrangement,
     );
     const parentingAssessmentSection = await loadParentingAssessmentSection(
       supabase,
@@ -98,6 +115,9 @@ export async function saveDailyLogForCarer(
     userId,
     existingLog,
     nowIso,
+    dataJsonOverride: existingLog
+      ? undefined
+      : withEducationArrangementSnapshot(body.dataJson, liveEducationArrangement),
   });
 
   const written = await writeDailyLog(supabase, existingLog?.id ?? null, logPayload);

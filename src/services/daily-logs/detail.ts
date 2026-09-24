@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveEducationArrangementForLog } from "../../lib/education-arrangements.js";
 import { getActiveHouseholdIds } from "../../lib/households.js";
 import {
   pickLogForAssignment,
@@ -49,7 +50,7 @@ export async function getDailyLogForCarer(
   const existingLog = pickLogForAssignment(row);
   const [
     { childNames, parentNames },
-    educationArrangement,
+    liveEducationArrangement,
     parentingAssessmentSection,
     contributorsResult,
   ] = await Promise.all([
@@ -67,6 +68,14 @@ export async function getDailyLogForCarer(
   if (contributorsResult.error) {
     return { data: null, error: contributorsResult.error };
   }
+
+  // Spec: "a log keeps the question set it was created with" -- prefer
+  // whatever was frozen into this log's own dataJson at creation over a
+  // fresh live lookup of the child's current profile.
+  const educationArrangement = resolveEducationArrangementForLog(
+    (existingLog?.data_json as Record<string, unknown> | null) ?? null,
+    liveEducationArrangement,
+  );
 
   return {
     data: toDailyLogDetailDto(

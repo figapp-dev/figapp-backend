@@ -1,3 +1,9 @@
+import { canonicalEducationArrangementId } from "./education-arrangements.js";
+import {
+  EDUCATION_HANDLED_FIELD_IDS,
+  requiredEducationFieldIds,
+} from "./education-question-fields.js";
+
 type TemplateFieldMeta = {
   group?: string;
   role?: string;
@@ -37,68 +43,35 @@ function isDidNotReturn(value: unknown): boolean {
   );
 }
 
-/** Mirrors figapp-new's constants/educationArrangements.ts (canonical source). */
-const LEGACY_TO_CANONICAL_ARRANGEMENT: Record<string, string> = {
-  "Home Learning/Tuitions": "Home Learning / Tuition",
-  "16+ (in work/trade)": "16+ Education, Employment or Training",
-};
-
-function normalizeEducationArrangement(value: unknown): string {
-  const text = typeof value === "string" ? value : "";
-  if (!text) return "";
-  return LEGACY_TO_CANONICAL_ARRANGEMENT[text] ?? text;
-}
-
-/** School / education section does not apply (16+, early years, legacy 16+ labels). */
-function isSchoolEducationSectionDisabled(
-  arrangement: string | null | undefined,
-): boolean {
-  const a = norm(normalizeEducationArrangement(arrangement));
-  if (!a) return false;
-
-  if (a.includes("16+")) return true;
-  if (a.includes("work/trade") || a.includes("in work")) return true;
-  if (a.includes("employment") && a.includes("training")) return true;
-  if (a.includes("early years")) return true;
-  if (a.includes("not yet school")) return true;
-
-  return false;
-}
+/** Education field ids that predate the Section 2 rebuild and are real
+ * template fields (shared storage between formal_schooling and
+ * home_learning, per the ED-A/ED-B field-mapping table) -- everything else
+ * requiredEducationFieldIds can return is a wholly-synthetic id with no
+ * template presence at all. */
+const REAL_TEMPLATE_EDUCATION_FIELD_IDS = new Set([
+  "attended_school",
+  "attended_on_time",
+  "reason_for_absence",
+  "reason_for_lateness",
+]);
 
 function isSchoolEducationSectionTitle(title: unknown): boolean {
   const t = norm(title);
   return t.includes("school") || t.includes("education");
 }
 
-/** All fields under a School/Education-titled section, in template order. */
-function schoolSectionFields(templateFields: unknown): TemplateFieldLike[] {
-  const out: TemplateFieldLike[] = [];
-  if (!Array.isArray(templateFields)) return out;
-  for (const section of templateFields) {
-    if (!section || typeof section !== "object") continue;
-    const { title, fields } = section as { title?: unknown; fields?: unknown };
-    if (!isSchoolEducationSectionTitle(title) || !Array.isArray(fields)) {
-      continue;
-    }
-    for (const field of fields) {
-      if (field && typeof field === "object") out.push(field as TemplateFieldLike);
-    }
-  }
-  return out;
-}
-
-/**
- * Field ids that live under a School/Education-titled section. The chat/form
- * UI (web + Flutter) never asks these when isSchoolEducationSectionDisabled
- * is true, so submit must not require them either — matches
- * useDailyLogFieldVisibility.ts's schoolVisibleFieldIds on web.
- */
-function schoolSectionFieldIds(templateFields: unknown): Set<string> {
-  const ids = new Set<string>();
-  for (const field of schoolSectionFields(templateFields)) {
-    if (typeof field.id === "string" && field.id.trim()) ids.add(field.id);
-  }
-  return ids;
+/** Whether this log's own template even has a School/Education-titled
+ * section -- test/minimal templates (e.g. an incidents-only fixture) don't,
+ * and must not be required to answer Education questions that were never
+ * part of their shape. All 3 production templates do. */
+function hasSchoolEducationSection(templateFields: unknown): boolean {
+  if (!Array.isArray(templateFields)) return false;
+  return templateFields.some(
+    (section) =>
+      section &&
+      typeof section === "object" &&
+      isSchoolEducationSectionTitle((section as { title?: unknown }).title),
+  );
 }
 
 /** Same fuzzy id-or-label matching as web's templateUtils.findFieldId. */
@@ -113,51 +86,6 @@ function findFieldId(
     return normNeedles.some((n) => label.includes(n) || id.includes(n));
   });
   return field?.id;
-}
-
-type SchoolFollowUpIds = {
-  attendedId: string;
-  onTimeId: string;
-  absenceId?: string;
-  latenessId?: string;
-};
-
-function resolveSchoolFollowUpIds(templateFields: unknown): SchoolFollowUpIds {
-  const fields = schoolSectionFields(templateFields);
-  return {
-    attendedId:
-      findFieldId(fields, "attended school", "attended home learning", "attended tuition") ??
-      "attended_school",
-    onTimeId: findFieldId(fields, "attended on time") ?? "attended_on_time",
-    absenceId: findFieldId(fields, "reason for absence", "absence reason"),
-    latenessId: findFieldId(fields, "reason for lateness", "late reason"),
-  };
-}
-
-/**
- * "Reason for absence"/"reason for lateness" only apply once the carer's
- * attendance answer opens them — matches _isSchoolFieldVisible on Flutter
- * and useDailyLogFieldVisibility.ts's schoolVisibleFieldIds on web. Without
- * this, a field the carer is never shown (because attended=Yes/on-time)
- * would still block submit.
- */
-function isInactiveSchoolFollowUp(
-  fieldId: string,
-  dataJson: Record<string, unknown>,
-  schoolIds: SchoolFollowUpIds,
-): boolean {
-  const attended = norm(dataJson[schoolIds.attendedId]);
-  if (fieldId === schoolIds.onTimeId) {
-    return attended !== "yes";
-  }
-  if (schoolIds.absenceId && fieldId === schoolIds.absenceId) {
-    return attended !== "no";
-  }
-  if (schoolIds.latenessId && fieldId === schoolIds.latenessId) {
-    const onTimeNo = norm(dataJson[schoolIds.onTimeId]) === "no";
-    return !(attended === "yes" && onTimeNo);
-  }
-  return false;
 }
 
 /** Web moodOptions.ts: accepts a real array, a JSON-encoded array string, or a lone legacy string. */
@@ -355,7 +283,6 @@ export type SubmitValidationResult =
 function codeLevelRequiredFieldIds(
   dataJson: Record<string, unknown>,
   allFieldIds: Set<string>,
-  schoolIds: SchoolFollowUpIds,
 ): Set<string> {
   const ids = new Set<string>();
 
@@ -375,18 +302,6 @@ function codeLevelRequiredFieldIds(
     }
   }
 
-  const attended = norm(dataJson[schoolIds.attendedId]);
-  if (attended === "no" && schoolIds.absenceId) {
-    ids.add(schoolIds.absenceId);
-  }
-  if (
-    attended === "yes" &&
-    norm(dataJson[schoolIds.onTimeId]) === "no" &&
-    schoolIds.latenessId
-  ) {
-    ids.add(schoolIds.latenessId);
-  }
-
   return ids;
 }
 
@@ -398,9 +313,12 @@ function codeLevelRequiredFieldIds(
  *   are not required while their parent answer keeps them hidden — but
  *   *are* required once that parent answer opens them, regardless of the
  *   template's own `required` flag (see codeLevelRequiredFieldIds)
- * - School/Education fields are not required when the child's education
- *   arrangement (16+, early years, …) disables that section — the carer is
- *   never shown those questions, so submit must not demand them either
+ * - School/Education fields are validated by their own dedicated set of
+ *   required field ids per canonical arrangement (see
+ *   requiredEducationFieldIds in education-question-fields.ts) rather than
+ *   through the template — most of the Section 2 rebuild's field ids are
+ *   synthetic (not present in template_fields at all), the same "documented
+ *   exception" pattern already used for incident_items below
  */
 export function validateDailyLogSubmit(
   dataJson: Record<string, unknown>,
@@ -408,33 +326,46 @@ export function validateDailyLogSubmit(
   educationArrangement?: string | null,
 ): SubmitValidationResult {
   const allFields = flattenTemplateFields(templateFields);
+  const missingFieldIds: string[] = [];
+
   if (allFields.length === 0) {
     // No template structure — only empty-object guard elsewhere.
     return { ok: true };
   }
 
-  const exemptSchoolFieldIds = isSchoolEducationSectionDisabled(
-    educationArrangement,
-  )
-    ? schoolSectionFieldIds(templateFields)
-    : null;
-  const schoolFollowUpIds = resolveSchoolFollowUpIds(templateFields);
   const allFieldIds = new Set(
     allFields
       .map((f) => f.id)
       .filter((id): id is string => typeof id === "string" && id.trim().length > 0),
   );
-  const codeRequiredIds = codeLevelRequiredFieldIds(
-    dataJson,
-    allFieldIds,
-    schoolFollowUpIds,
-  );
+  const codeRequiredIds = codeLevelRequiredFieldIds(dataJson, allFieldIds);
 
-  const missingFieldIds: string[] = [];
+  // Only this log's own template shape decides whether Education questions
+  // apply at all -- a minimal/test template without a School/Education
+  // section never asked them, so submit must not demand them either. Of the
+  // required ids, only the ones reused from real (pre-rebuild) template
+  // fields (attended_school/attended_on_time/reason_for_absence/
+  // reason_for_lateness) additionally need to actually exist in this
+  // template -- an agency that trimmed one of those out never asked it
+  // either. The wholly-synthetic ids (home_learning_*/nursery_*/eet_*/
+  // learning_development_*) have no template presence by design, so they're
+  // always required once their gate applies.
+  const arrangementId = canonicalEducationArrangementId(educationArrangement);
+  const requiredEducationIds = hasSchoolEducationSection(templateFields)
+    ? new Set(
+        [...requiredEducationFieldIds(arrangementId, dataJson)].filter(
+          (id) => !REAL_TEMPLATE_EDUCATION_FIELD_IDS.has(id) || allFieldIds.has(id),
+        ),
+      )
+    : new Set<string>();
 
   for (const field of allFields) {
     const fieldId = field.id;
     if (!fieldId) continue;
+    // Handled below via requiredEducationIds instead — real template fields
+    // reused across arrangements (attended_on_time, reason_for_lateness, …)
+    // must not also be checked here with the wrong (template-order) gating.
+    if (EDUCATION_HANDLED_FIELD_IDS.has(fieldId)) continue;
 
     const role = field.meta?.role;
     const group = field.meta?.group;
@@ -466,10 +397,14 @@ export function validateDailyLogSubmit(
 
     if (!isFieldRequired(field) && !codeRequiredIds.has(fieldId)) continue;
     if (isInactiveFollowUp(fieldId, dataJson)) continue;
-    if (exemptSchoolFieldIds?.has(fieldId)) continue;
-    if (isInactiveSchoolFollowUp(fieldId, dataJson, schoolFollowUpIds)) continue;
 
     if (isValueEmpty(dataJson[fieldId])) {
+      missingFieldIds.push(fieldId);
+    }
+  }
+
+  for (const fieldId of requiredEducationIds) {
+    if (isValueEmpty(dataJson[fieldId]) && !missingFieldIds.includes(fieldId)) {
       missingFieldIds.push(fieldId);
     }
   }

@@ -1,4 +1,5 @@
 import { buildChildDisplayName } from "../lib/child-names.js";
+import { normalizeEducationArrangement } from "../lib/education-arrangements.js";
 import { getPlacementDisplayStatus } from "../lib/placement-status.js";
 import type {
   AllergyDto,
@@ -150,11 +151,6 @@ export function toPlacementHistoryItemDto(
   };
 }
 
-const LEGACY_EDUCATION_ARRANGEMENT: Record<string, string> = {
-  "Home Learning/Tuitions": "Home Learning / Tuition",
-  "16+ (in work/trade)": "16+ Education, Employment or Training",
-};
-
 export function educationArrangementFromLifeStory(
   raw: unknown,
 ): string | null {
@@ -173,9 +169,8 @@ export function educationArrangementFromLifeStory(
   };
   const value = record.education_arrangement ?? record.educationArrangement;
   if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  return LEGACY_EDUCATION_ARRANGEMENT[trimmed] ?? trimmed;
+  const normalized = normalizeEducationArrangement(value);
+  return normalized || null;
 }
 
 export function toChildDetailDto(

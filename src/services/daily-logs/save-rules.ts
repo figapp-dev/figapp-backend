@@ -31,8 +31,11 @@ export function buildDailyLogWritePayload(options: {
   userId: string;
   existingLog: DailyLogDetailLogRow | null;
   nowIso: string;
+  /** Defaults to body.dataJson -- pass this to write a snapshot-stamped
+   * copy on first create without mutating the request body. */
+  dataJsonOverride?: Record<string, unknown>;
 }): Record<string, unknown> {
-  const { row, body, intent, userId, existingLog, nowIso } = options;
+  const { row, body, intent, userId, existingLog, nowIso, dataJsonOverride } = options;
   const assignedDate = toDateOnly(row.assigned_date) ?? "";
 
   const logPayload: Record<string, unknown> = {
@@ -42,7 +45,7 @@ export function buildDailyLogWritePayload(options: {
     template_id: row.template_id,
     author_id: userId,
     date: assignedDate || getTodayUKDateString(),
-    data_json: body.dataJson,
+    data_json: dataJsonOverride ?? body.dataJson,
     status: resolveNextLogStatus(intent, existingLog?.status),
     household_id: row.household_id,
     updated_at: nowIso,

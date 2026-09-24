@@ -3,6 +3,7 @@ import { healthRoute } from "./health.js";
 import { profileRoute } from "./profile.js";
 import { childrenRoute } from "./children.js";
 import { dailyLogsRoute } from "./daily-logs.js";
+import { dailyLogCatalogRoute } from "./daily-log-catalog.js";
 import { filesRoute } from "./files.js";
 import { figChatRoute } from "./figchat.js";
 import { lifeStoryRoute } from "./life-story.js";
@@ -36,6 +37,7 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(fcmRoute);
   await app.register(childrenRoute);
   await app.register(dailyLogsRoute);
+  await app.register(dailyLogCatalogRoute);
   await app.register(filesRoute);
   await app.register(figChatRoute);
   await app.register(lifeStoryRoute);
