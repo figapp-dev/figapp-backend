@@ -130,6 +130,50 @@ describe("validateDailyLogSubmit", () => {
     }
   });
 
+  // Section 2 rebuild (spec v2.4): Education requirements are resolved per
+  // canonical arrangement, independent of which real template fields exist
+  // -- home_learning's gate/reason ids are wholly synthetic (never in any
+  // template), so they must still be required even against the minimal
+  // `school` fixture above that only has attended_school/attended_on_time.
+  it("requires home_learning's own synthetic gate/reason fields when that arrangement applies", () => {
+    const result = validateDailyLogSubmit(
+      { home_learning_attended: "No" },
+      school,
+      "Home Learning or Tuition",
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.missingFieldIds).toEqual(["home_learning_absence_reason"]);
+    }
+  });
+
+  it("early_years requires its own synthetic fields, not the formal_schooling ones", () => {
+    const result = validateDailyLogSubmit(
+      { nursery_attended: "Yes" },
+      school,
+      "Early Years or Not Yet School Age",
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.missingFieldIds).toEqual(["nursery_on_time"]);
+    }
+    // Does not also demand formal_schooling's attended_school, even though
+    // it's marked required in this template — the arrangement decides which
+    // set applies, and it isn't formal_schooling here.
+    expect(result).not.toMatchObject({
+      missingFieldIds: expect.arrayContaining(["attended_school"]),
+    });
+  });
+
+  it("a template with no School/Education section never requires Education fields, for any arrangement", () => {
+    const noSchoolTemplate = [
+      { id: "page_am", fields: [{ id: "mood", required: true }] },
+    ];
+    expect(
+      validateDailyLogSubmit({ mood: "Happy" }, noSchoolTemplate, "Formal Schooling"),
+    ).toEqual({ ok: true });
+  });
+
   // Regression: real production templates mark every one of these
   // conditional follow-ups `required: false` (confirmed via a live query),
   // so isFieldRequired(field) alone let submit accept the log with them

@@ -43,6 +43,11 @@ describe("API smoke", () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it("GET /daily-log-catalog without auth returns 401", async () => {
+    const res = await app.inject({ method: "GET", url: "/daily-log-catalog" });
+    expect(res.statusCode).toBe(401);
+  });
+
   it("GET /billing/access without auth returns 401", async () => {
     const res = await app.inject({ method: "GET", url: "/billing/access" });
     expect(res.statusCode).toBe(401);

@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "railway:check": "npm run typecheck && npm run build && npm test"
+    "validate:catalog": "tsx src/daily-log-catalog/validate.ts",
+    "export:catalog-fallback": "tsx src/daily-log-catalog/export-fallback.ts",
+    "railway:check": "npm run typecheck && npm run build && npm test && npm run validate:catalog"
   },
   "keywords": [],
   "author": "",
