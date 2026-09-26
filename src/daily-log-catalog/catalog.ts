@@ -21,7 +21,7 @@ import type { CatalogDocument } from "./types.js";
 
 export const dailyLogCatalog: CatalogDocument = {
   schemaVersion: 1,
-  catalogVersion: 4,
+  catalogVersion: 5,
   fields: {
     // -- Section: Morning routine & meals (page_morning) --
 
@@ -635,7 +635,7 @@ export const dailyLogCatalog: CatalogDocument = {
 
     other_comments: {
       fieldId: "other_comments",
-      question: { default: "Anything else you'd like to add about {possessive} day?" },
+      question: { default: "Would you like to add anything else about {possessive} day?" },
     },
 
     // -- Section 2 rebuild (spec v2.4, ED-A..E) — School / Education --
