@@ -3,6 +3,13 @@ import type {
   UpdateLifeStoryEntryBody,
 } from "../types/life-story.js";
 
+const LIFE_STORY_SECTION_ENUM = [
+  "leisure_fun",
+  "academic_achievements",
+  "milestones",
+  "other_events",
+] as const;
+
 /** POST /life-story/:childId — media optional (notes-only allowed).
  * When media is sent, path must come from signed-upload-url for life_story. */
 export const addLifeStoryEntryBodySchema = {
@@ -12,7 +19,7 @@ export const addLifeStoryEntryBodySchema = {
   properties: {
     section: {
       type: "string",
-      enum: ["leisure_fun", "academic_achievements", "other_achievements"],
+      enum: [...LIFE_STORY_SECTION_ENUM],
     },
     notes: { type: "string" },
     media: {
@@ -35,7 +42,7 @@ export const updateLifeStoryEntryBodySchema = {
   properties: {
     section: {
       type: "string",
-      enum: ["leisure_fun", "academic_achievements", "other_achievements"],
+      enum: [...LIFE_STORY_SECTION_ENUM],
     },
     notes: { type: "string" },
     media: {

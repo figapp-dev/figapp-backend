@@ -1,10 +1,11 @@
-/** Mirrors web's modules/children/lifestory/constants.ts — same three
- * sections, same keys, since this app writes into the same shared
- * children.life_story_data jsonb column. */
+/** Mirrors web's modules/children/lifestory/constants.ts — same sections
+ * and keys, since this app writes into the shared children.life_story_data
+ * jsonb column. */
 export const LIFE_STORY_SECTIONS = [
   { key: "leisure_fun", label: "Leisure & Fun" },
   { key: "academic_achievements", label: "Academic Achievements" },
-  { key: "other_achievements", label: "Other Achievements" },
+  { key: "milestones", label: "Milestones" },
+  { key: "other_events", label: "Other Events" },
 ] as const;
 
 export type LifeStorySectionKey = (typeof LIFE_STORY_SECTIONS)[number]["key"];
@@ -15,8 +16,29 @@ export function isLifeStorySectionKey(
   return LIFE_STORY_SECTIONS.some((section) => section.key === value);
 }
 
+/** Older entries used `other_achievements` — map to Other Events. */
+export function normalizeLifeStorySectionKey(
+  value: unknown,
+): LifeStorySectionKey | null {
+  if (value === "other_achievements") return "other_events";
+  if (isLifeStorySectionKey(value)) return value;
+  return null;
+}
+
 export function lifeStorySectionLabel(key: LifeStorySectionKey): string {
   return LIFE_STORY_SECTIONS.find((section) => section.key === key)!.label;
+}
+
+export function emptyLifeStorySectionNotes(): Record<
+  LifeStorySectionKey,
+  string
+> {
+  return {
+    leisure_fun: "",
+    academic_achievements: "",
+    milestones: "",
+    other_events: "",
+  };
 }
 
 export type LifeStoryMediaType = "photo" | "video" | "file";
@@ -26,7 +48,7 @@ export type LifeStoryMediaType = "photo" | "video" | "file";
  * correctly in both. */
 export type LifeStoryEntryRow = {
   id: string;
-  section: LifeStorySectionKey;
+  section: LifeStorySectionKey | "other_achievements";
   section_label: string;
   notes: string;
   media_url: string | null;
@@ -37,7 +59,7 @@ export type LifeStoryEntryRow = {
 };
 
 export type LifeStoryData = {
-  lifestory_section_notes?: Partial<Record<LifeStorySectionKey, string>>;
+  lifestory_section_notes?: Partial<Record<string, string>>;
   lifestory_entries?: LifeStoryEntryRow[];
   [key: string]: unknown;
 };

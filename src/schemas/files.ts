@@ -34,7 +34,12 @@ export const createFileUploadBodySchema = {
     },
     section: {
       type: "string",
-      enum: ["leisure_fun", "academic_achievements", "other_achievements"],
+      enum: [
+        "leisure_fun",
+        "academic_achievements",
+        "milestones",
+        "other_events",
+      ],
       description: "Life Story section (required for life_story only)",
     },
     fileName: { type: "string", minLength: 1 },
