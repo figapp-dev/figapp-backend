@@ -4,16 +4,11 @@ import { getActiveHouseholdIds } from "../../lib/households.js";
 import { assertChildAccessibleToCarer } from "../children/shared.js";
 import { findChildLifeStoryData } from "../../repositories/life-story.js";
 import { sortLifeStoryEntries, toLifeStoryEntryDto } from "../../mappers/life-story.js";
-import type {
-  LifeStoryListDto,
-  LifeStorySectionKey,
+import {
+  emptyLifeStorySectionNotes,
+  type LifeStoryListDto,
+  type LifeStorySectionKey,
 } from "../../types/life-story.js";
-
-const EMPTY_SECTION_NOTES: Record<LifeStorySectionKey, string> = {
-  leisure_fun: "",
-  academic_achievements: "",
-  other_achievements: "",
-};
 
 export async function listLifeStoryForCarer(
   supabase: SupabaseClient,
@@ -54,14 +49,19 @@ export async function listLifeStoryForCarer(
 
   const rawNotes = data?.lifestory_section_notes ?? {};
   const sectionNotes: Record<LifeStorySectionKey, string> = {
+    ...emptyLifeStorySectionNotes(),
     leisure_fun: rawNotes.leisure_fun?.trim() || "",
     academic_achievements: rawNotes.academic_achievements?.trim() || "",
-    other_achievements: rawNotes.other_achievements?.trim() || "",
+    milestones: rawNotes.milestones?.trim() || "",
+    other_events:
+      rawNotes.other_events?.trim() ||
+      rawNotes.other_achievements?.trim() ||
+      "",
   };
 
   return serviceSuccess<LifeStoryListDto>({
     childId,
     entries: entries.map(toLifeStoryEntryDto),
-    sectionNotes: { ...EMPTY_SECTION_NOTES, ...sectionNotes },
+    sectionNotes,
   });
 }

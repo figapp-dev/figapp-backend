@@ -12,6 +12,7 @@ import { inferLifeStoryMediaType } from "./media-type.js";
 import {
   isLifeStorySectionKey,
   lifeStorySectionLabel,
+  normalizeLifeStorySectionKey,
   type LifeStorySectionKey,
 } from "../../types/life-story.js";
 import type {
@@ -87,7 +88,8 @@ export async function updateLifeStoryEntryForCarer(
     return serviceFailure({ forbidden: true });
   }
 
-  let section = existing.section;
+  let section =
+    normalizeLifeStorySectionKey(existing.section) ?? "leisure_fun";
   if (body.section !== undefined) {
     const next = body.section.trim();
     if (!isLifeStorySectionKey(next)) {

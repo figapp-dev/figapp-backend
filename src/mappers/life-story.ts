@@ -1,13 +1,20 @@
-import type {
-  LifeStoryEntryDto,
-  LifeStoryEntryRow,
+import {
+  lifeStorySectionLabel,
+  normalizeLifeStorySectionKey,
+  type LifeStoryEntryDto,
+  type LifeStoryEntryRow,
 } from "../types/life-story.js";
 
 export function toLifeStoryEntryDto(row: LifeStoryEntryRow): LifeStoryEntryDto {
+  const section =
+    normalizeLifeStorySectionKey(row.section) ?? "leisure_fun";
   return {
     id: row.id,
-    section: row.section,
-    sectionLabel: row.section_label,
+    section,
+    sectionLabel:
+      row.section === "other_achievements" || !row.section_label
+        ? lifeStorySectionLabel(section)
+        : row.section_label,
     notes: row.notes,
     mediaPath: row.media_url,
     mediaType: row.media_type,

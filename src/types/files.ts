@@ -22,7 +22,7 @@ export type CreateFileUploadBody = {
   /** Template field / question id — required for daily_log, unused otherwise. */
   fieldId?: string;
   /** Life Story section key ("leisure_fun" | "academic_achievements" |
-   * "other_achievements") — required for life_story, unused otherwise. */
+   * "other_events") — required for life_story, unused otherwise. */
   section?: string;
   fileName: string;
 };

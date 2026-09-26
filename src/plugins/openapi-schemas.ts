@@ -807,7 +807,12 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
       id: { type: "string" },
       section: {
         type: "string",
-        enum: ["leisure_fun", "academic_achievements", "other_achievements"],
+        enum: [
+          "leisure_fun",
+          "academic_achievements",
+          "milestones",
+          "other_events",
+        ],
       },
       sectionLabel: { type: "string" },
       notes: { type: "string" },
@@ -834,13 +839,15 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
         required: [
           "leisure_fun",
           "academic_achievements",
-          "other_achievements",
+          "milestones",
+          "other_events",
         ],
         additionalProperties: false,
         properties: {
           leisure_fun: { type: "string" },
           academic_achievements: { type: "string" },
-          other_achievements: { type: "string" },
+          milestones: { type: "string" },
+          other_events: { type: "string" },
         },
       },
     },
