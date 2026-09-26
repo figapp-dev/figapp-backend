@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": 4,
+  "catalogVersion": 5,
   "fields": {
     "waking_time": {
       "fieldId": "waking_time",
@@ -835,7 +835,7 @@
     "other_comments": {
       "fieldId": "other_comments",
       "question": {
-        "default": "Anything else you'd like to add about {possessive} day?"
+        "default": "Would you like to add anything else about {possessive} day?"
       }
     },
     "attended_school": {
