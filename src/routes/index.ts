@@ -23,6 +23,7 @@ import { accountRoute } from "./account.js";
 import { gdprConsentRoute } from "./gdpr-consent.js";
 import { notificationsRoute } from "./notifications.js";
 import { fcmRoute } from "./fcm.js";
+import { adminChatRoute } from "./admin-chat.js";
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(healthRoute);
@@ -49,4 +50,5 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(ticketsRoute);
   await app.register(surveysRoute);
   await app.register(expensesRoute);
+  await app.register(adminChatRoute);
 }

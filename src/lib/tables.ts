@@ -59,4 +59,7 @@ export const TABLES = {
   NOTIFICATIONS: "notifications",
   NOTIFICATION_PREFERENCES: "notification_preferences",
   FCM_DEVICE_TOKENS: "fcm_device_tokens",
+
+  DAILY_LOG_ANSWERS: "daily_log_answers",
+  ADMIN_CHAT_LOGS: "admin_chat_logs",
 } as const;
