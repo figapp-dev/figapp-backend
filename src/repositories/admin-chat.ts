@@ -44,6 +44,7 @@ export type AdminChatLogInsert = {
   matched_aggregation: string | null;
   matched_query: Record<string, unknown> | null;
   answer: string | null;
+  answer_json: Record<string, unknown> | null;
   error: string | null;
 };
 
@@ -53,6 +54,30 @@ export async function insertAdminChatLog(
 ): Promise<{ error: Error | null }> {
   const { error } = await supabase.from(TABLES.ADMIN_CHAT_LOGS).insert(row);
   return { error };
+}
+
+export type AdminChatHistoryRow = {
+  id: string;
+  question: string;
+  answer: string | null;
+  answer_json: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export async function listTodayAdminChatHistory(
+  supabase: SupabaseClient,
+  userId: string,
+  sinceIso: string,
+): Promise<{ data: AdminChatHistoryRow[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.ADMIN_CHAT_LOGS)
+    .select("id, question, answer, answer_json, created_at")
+    .eq("user_id", userId)
+    .gte("created_at", sinceIso)
+    .order("created_at", { ascending: true })
+    .limit(100);
+
+  return { data: (data as AdminChatHistoryRow[] | null) ?? [], error };
 }
 
 export type AllowlistedDateRange = {

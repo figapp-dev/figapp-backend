@@ -4,12 +4,17 @@ import {
   countTodayAdminChatQuestions,
   findAgencyUserRoleByUserId,
   insertAdminChatLog,
+  listTodayAdminChatHistory,
 } from "../../repositories/admin-chat.js";
 import { composeAnswerText, pickQuery } from "./claude-client.js";
 import { runValidatedQuery } from "./query-validator.js";
 import { findTableDef } from "./schema-catalog.js";
 import { env } from "../../config/env.js";
-import type { AdminChatAnswer, AdminChatRow } from "../../types/admin-chat.js";
+import type {
+  AdminChatAnswer,
+  AdminChatHistoryItem,
+  AdminChatRow,
+} from "../../types/admin-chat.js";
 
 const MAX_QUESTION_LENGTH = 300;
 
@@ -82,6 +87,7 @@ export async function askAdminChat(
   const pick = await pickQuery(question);
 
   if (!pick.matched) {
+    const answer: AdminChatAnswer = { text: pick.declineText, stats: [], rows: [] };
     await insertAdminChatLog(supabase, {
       agency_id: caller.agency_id,
       user_id: userId,
@@ -90,18 +96,20 @@ export async function askAdminChat(
       matched_aggregation: null,
       matched_query: null,
       answer: pick.declineText,
+      answer_json: answer,
       error: null,
     });
-    return serviceSuccess<AdminChatAnswer>({
-      text: pick.declineText,
-      stats: [],
-      rows: [],
-    });
+    return serviceSuccess<AdminChatAnswer>(answer);
   }
 
   const validated = await runValidatedQuery(supabase, caller.agency_id, pick.toolCall);
 
   if (!validated.ok) {
+    const answer: AdminChatAnswer = {
+      text: "I couldn't safely answer that question. Try rephrasing it.",
+      stats: [],
+      rows: [],
+    };
     await insertAdminChatLog(supabase, {
       agency_id: caller.agency_id,
       user_id: userId,
@@ -110,13 +118,10 @@ export async function askAdminChat(
       matched_aggregation: pick.toolCall.aggregation,
       matched_query: pick.toolCall,
       answer: null,
+      answer_json: answer,
       error: validated.reason,
     });
-    return serviceSuccess<AdminChatAnswer>({
-      text: "I couldn't safely answer that question. Try rephrasing it.",
-      stats: [],
-      rows: [],
-    });
+    return serviceSuccess<AdminChatAnswer>(answer);
   }
 
   const answerText = await composeAnswerText(
@@ -158,8 +163,34 @@ export async function askAdminChat(
           : validated.result.rows.length,
     },
     answer: answerText,
+    answer_json: answer,
     error: null,
   });
 
   return serviceSuccess(answer);
+}
+
+/** Today's question/answer history for the calling admin, to restore the chat on page reload. */
+export async function getAdminChatHistory(supabase: SupabaseClient, userId: string) {
+  const callerRes = await findAgencyUserRoleByUserId(supabase, userId);
+  if (callerRes.error) return serviceFailure({ error: callerRes.error });
+
+  const caller = callerRes.data;
+  if (!caller || caller.role !== "agency_admin" || caller.is_active === false) {
+    return serviceFailure({ forbidden: true });
+  }
+
+  const historyRes = await listTodayAdminChatHistory(supabase, userId, startOfTodayIso());
+  if (historyRes.error) return serviceFailure({ error: historyRes.error });
+
+  const items: AdminChatHistoryItem[] = historyRes.data.map((row) => ({
+    id: row.id,
+    question: row.question,
+    answer:
+      (row.answer_json as AdminChatAnswer | null) ??
+      ({ text: row.answer ?? "", stats: [], rows: [] } satisfies AdminChatAnswer),
+    createdAt: row.created_at,
+  }));
+
+  return serviceSuccess(items);
 }

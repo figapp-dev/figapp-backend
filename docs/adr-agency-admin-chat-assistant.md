@@ -59,24 +59,56 @@ Flow per question (2 Claude API calls):
    logged -- this is the roadmap for which real gaps to fill next,
    without guessing upfront.
 
-## 3. Data scope (curated schema doc -- v1)
+## 3. Data scope (curated schema doc -- current, post-launch)
 
 The Supabase project has ~120 tables in `public`; most (billing,
 impersonation, GDPR audit, platform internals) are irrelevant to admin
 reporting questions and must **not** appear in the schema doc or the
-allowlist. v1 scope is the following tables only:
+allowlist. This is the single source of truth in code:
+`figapp-backend/src/services/admin-chat/schema-catalog.ts`
+(`ADMIN_CHAT_TABLES`) -- this section is a snapshot of it, kept roughly in
+sync, not authoritative on its own.
 
-| Table | Purpose |
+**Two corrections found after the original draft:** `households` and
+`placements` are both dead tables (0 rows) -- the app actually uses
+`carer_households` and `household_children`/`household_carers`. Always
+verify real row counts/usage before trusting a table name that sounds
+right.
+
+Several tables that matter for real questions (household composition,
+event participants) don't have a direct `agency_id` column, which broke
+the "always force agency_id" rule from section 4. Rather than teaching the
+query tool to do joins (reopening the SQL-injection-shaped risk this whole
+design avoids), each of those is exposed as a Postgres **view** --
+`admin_chat_<name>_named` -- that pre-joins in `agency_id` and human-readable
+names, created `with (security_invoker = true)` so RLS on every joined
+table is still enforced as the calling admin, not the view owner. Adding
+a table means adding one catalog entry when it already has `agency_id`, or
+one reviewed view + one catalog entry when it doesn't.
+
+| Table / view | Purpose |
 |---|---|
-| `agency_users` | agency staff, social workers, foster carers (has DB comment confirming this) |
-| `households`, `household_carers`, `household_children`, `carer_households` | household composition |
-| `placements`, `placement_types` | child-carer placement records |
-| `daily_logs`, `daily_log_assignments`, `daily_log_contributors`, `daily_log_answers` | daily log submissions + per-question answers |
-| `events`, `event_participants` | calendar/events |
+| `agency_users` | agency staff, social workers, foster carers |
+| `carer_households` | foster carer households |
+| `admin_chat_daily_log_assignments_named` (view) | daily log tasks, with the real "who this is for" name (child, or the placed parent for a `placed_parent`-subject row) already joined in -- the raw `daily_log_assignments` table only has UUIDs |
+| `daily_log_answers` | per-question answers inside submitted daily logs |
+| `events` | calendar events |
+| `admin_chat_event_participants_named` (view) | who's invited/attending an event + RSVP status, with names joined in |
 | `documents` | document records (signature/status) |
 | `tickets` | support tickets |
 | `surveys`, `survey_responses` | survey distribution + responses |
 | `expense_claims` | expense claim status |
+| `admin_chat_household_children_named` (view) | which children are placed in which household, with names joined in |
+| `admin_chat_household_carers_named` (view) | which carers belong to which household, with names joined in |
+
+Every filterable status/role/type-like column also has a `columnValues`
+entry in the catalog listing its real values (pulled from actual DB data
+and Postgres enum definitions) -- without this, Claude guesses
+plausible-sounding values (`"overdue"`, `"pending"` for expense claims)
+that don't exist, silently matching zero rows and then, uncorrected,
+misreporting that as a positive result. See `claude-client.ts`'s
+`COMPOSE_SYSTEM_PROMPT` for the explicit instruction against that failure
+mode.
 
 Adding a table later = adding one entry to the schema doc + the
 allowlist, not a code change to the query builder.

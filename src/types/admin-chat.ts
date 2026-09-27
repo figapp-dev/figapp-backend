@@ -44,3 +44,11 @@ export type QueryToolCall = {
 export type QueryToolResult =
   | { kind: "count"; count: number }
   | { kind: "list"; rows: Record<string, unknown>[] };
+
+/** One past question/answer pair, for restoring the chat on page reload. */
+export type AdminChatHistoryItem = {
+  id: string;
+  question: string;
+  answer: AdminChatAnswer;
+  createdAt: string;
+};

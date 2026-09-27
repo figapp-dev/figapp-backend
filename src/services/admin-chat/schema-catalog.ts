@@ -148,6 +148,61 @@ export const ADMIN_CHAT_TABLES: AdminChatTableDef[] = [
     dateRangeColumns: ["expense_date", "created_at"],
     columnValues: { status: ["new", "approved", "declined", "paid"] },
   },
+  {
+    table: "admin_chat_household_children_named",
+    description:
+      "Which children are (or were) placed in which household, with names already joined in. Use for questions like 'how many children are placed', 'which household is <child> in', 'children with no current placement' (is_active false), etc.",
+    columns: [
+      "child_name",
+      "household_name",
+      "is_active",
+      "start_date",
+      "end_date",
+      "placement_reason",
+      "id",
+    ],
+    filterableColumns: ["is_active"],
+    dateRangeColumns: ["start_date", "end_date"],
+    displayLabel: "child placements",
+  },
+  {
+    table: "admin_chat_household_carers_named",
+    description:
+      "Which foster carers belong to which household, with names already joined in. Use for questions like 'how many carers are in <household>', 'which household is <carer> in', etc.",
+    columns: [
+      "carer_name",
+      "household_name",
+      "role",
+      "is_active",
+      "start_date",
+      "end_date",
+      "id",
+    ],
+    filterableColumns: ["is_active"],
+    dateRangeColumns: ["start_date", "end_date"],
+    displayLabel: "household carers",
+  },
+  {
+    table: "admin_chat_event_participants_named",
+    description:
+      "Who is invited to or attending which calendar event, and their RSVP status, with names already joined in. Use for questions like 'who hasn't responded to <event>', 'who's attending <event>', etc. participant_name may be blank for a participant who isn't a staff/carer/child record.",
+    columns: [
+      "participant_name",
+      "event_title",
+      "status",
+      "participant_role",
+      "event_type",
+      "start_datetime",
+      "id",
+    ],
+    filterableColumns: ["status", "participant_role"],
+    dateRangeColumns: ["start_datetime"],
+    columnValues: {
+      status: ["accepted", "pending"],
+      participant_role: ["attendee", "organizer"],
+    },
+    displayLabel: "event participants",
+  },
 ];
 
 export function findTableDef(table: string): AdminChatTableDef | undefined {

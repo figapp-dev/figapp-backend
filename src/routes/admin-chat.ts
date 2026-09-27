@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../plugins/auth.js";
 import { bearerSecurity, errorResponses } from "../plugins/swagger.js";
-import { askAdminChat } from "../services/admin-chat/index.js";
+import { askAdminChat, getAdminChatHistory } from "../services/admin-chat/index.js";
 import { badRequest, forbidden, internalError } from "../lib/errors.js";
 import { AppError } from "../lib/errors.js";
 import { ErrorMessages } from "../constants/error-messages.js";
@@ -68,6 +68,65 @@ export async function adminChatRoute(app: FastifyInstance) {
             ? ErrorMessages.ADMIN_CHAT_NOT_CONFIGURED
             : ErrorMessages.ADMIN_CHAT_FAILED;
         throw internalError(message);
+      }
+
+      return result.data;
+    },
+  );
+
+  app.get(
+    "/admin-chat/history",
+    {
+      schema: {
+        tags: ["admin-chat"],
+        summary: "Ask Figgy — today's question/answer history for the calling admin",
+        security: [...bearerSecurity],
+        response: {
+          200: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                question: { type: "string" },
+                createdAt: { type: "string" },
+                answer: {
+                  type: "object",
+                  properties: {
+                    text: { type: "string" },
+                    stats: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          value: { type: "string" },
+                          label: { type: "string" },
+                          delta: { type: "string" },
+                        },
+                      },
+                    },
+                    rows: {
+                      type: "array",
+                      items: { type: "object", additionalProperties: { type: "string" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const result = await getAdminChatHistory(request.supabase, request.user.id);
+
+      if (result.forbidden) {
+        throw forbidden(ErrorMessages.ADMIN_CHAT_FORBIDDEN);
+      }
+      if (result.error || !result.data) {
+        request.log.error(result.error);
+        throw internalError(ErrorMessages.ADMIN_CHAT_HISTORY_FAILED);
       }
 
       return result.data;
