@@ -188,4 +188,5 @@ export const ErrorMessages = {
     "You've reached today's question limit for Ask Figgy. Try again tomorrow.",
   ADMIN_CHAT_NOT_CONFIGURED: "Ask Figgy is not configured on this server",
   ADMIN_CHAT_FAILED: "Ask Figgy could not answer that question",
+  ADMIN_CHAT_HISTORY_FAILED: "Failed to load today's Ask Figgy history",
 } as const;
