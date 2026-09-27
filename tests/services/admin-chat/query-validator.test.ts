@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkDateRange,
   checkFilters,
   resolveListColumns,
 } from "../../../src/services/admin-chat/query-validator.js";
 import { findTableDef } from "../../../src/services/admin-chat/schema-catalog.js";
 
 const agencyUsers = findTableDef("agency_users")!;
+const dailyLogAssignments = findTableDef("admin_chat_daily_log_assignments_named")!;
 
 describe("checkFilters", () => {
   it("allows a filter on an allowlisted column", () => {
@@ -45,5 +47,51 @@ describe("resolveListColumns", () => {
     if ("error" in result) {
       expect(result.error).toContain('Column "date_of_birth" is not exposed');
     }
+  });
+});
+
+describe("checkDateRange", () => {
+  it("allows no date_range at all", () => {
+    expect(checkDateRange(dailyLogAssignments, undefined)).toBeNull();
+  });
+
+  it("allows a valid range on an allowlisted date-range column ('last week')", () => {
+    expect(
+      checkDateRange(dailyLogAssignments, {
+        column: "assigned_date",
+        from: "2026-09-20",
+        to: "2026-09-26",
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects a column that isn't a date-range column on that table", () => {
+    expect(
+      checkDateRange(dailyLogAssignments, {
+        column: "status",
+        from: "2026-09-20",
+        to: "2026-09-26",
+      }),
+    ).toContain('Column "status" is not a date-range column');
+  });
+
+  it("rejects malformed dates", () => {
+    expect(
+      checkDateRange(dailyLogAssignments, {
+        column: "assigned_date",
+        from: "20 Sept 2026",
+        to: "2026-09-26",
+      }),
+    ).toContain("must be YYYY-MM-DD");
+  });
+
+  it("rejects from being after to", () => {
+    expect(
+      checkDateRange(dailyLogAssignments, {
+        column: "assigned_date",
+        from: "2026-09-26",
+        to: "2026-09-20",
+      }),
+    ).toContain("must not be after");
   });
 });

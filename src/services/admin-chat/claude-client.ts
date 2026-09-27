@@ -1,4 +1,5 @@
 import { env } from "../../config/env.js";
+import { getTodayUKDateString } from "../../lib/dates.js";
 import { buildQueryTool, QUERY_TOOL_NAME } from "./schema-catalog.js";
 import type { QueryToolCall, QueryToolResult } from "../../types/admin-chat.js";
 
@@ -43,12 +44,16 @@ function textOf(blocks: AnthropicContentBlock[]): string {
     .trim();
 }
 
-const PICK_SYSTEM_PROMPT = [
-  "You are Ask Figgy, a chat assistant for agency admins on FigApp, a UK foster care agency management platform.",
-  `Admins ask short operational questions about their own agency's data. Call the ${QUERY_TOOL_NAME} tool when the question clearly matches one of its allowed tables.`,
-  "If the question does not clearly match, do NOT call the tool — reply with one short sentence saying you can't answer that yet.",
-  "Never invent numbers.",
-].join(" ");
+function buildPickSystemPrompt(): string {
+  return [
+    "You are Ask Figgy, a chat assistant for agency admins on FigApp, a UK foster care agency management platform.",
+    `Today's date (Europe/London) is ${getTodayUKDateString()}. Resolve "today"/"this week"/"this month" etc. against this date yourself — never ask the admin what today's date is.`,
+    `Admins ask short operational questions about their own agency's data. Call the ${QUERY_TOOL_NAME} tool when the question clearly matches one of its allowed tables.`,
+    "If the question does not clearly match, do NOT call the tool — reply with one short, friendly sentence saying you can't answer that yet, and suggest they check elsewhere in FigApp or contact support if it seems important.",
+    "You are talking to a non-technical agency admin, never a developer. Never mention tables, columns, fields, filters, queries, schemas, or any other implementation detail, and never name the query tool. Speak only in plain, everyday terms about carers, children, households, logs, documents, etc.",
+    "Never invent numbers.",
+  ].join(" ");
+}
 
 export type PickResult =
   | { matched: true; toolCall: QueryToolCall; toolUseId: string }
@@ -64,7 +69,7 @@ export async function pickQuery(question: string): Promise<PickResult> {
   const { content } = await callAnthropic({
     model: env.adminChatModel,
     max_tokens: 512,
-    system: PICK_SYSTEM_PROMPT,
+    system: buildPickSystemPrompt(),
     tools: [buildQueryTool()],
     tool_choice: { type: "auto" },
     messages: [{ role: "user", content: question }],
@@ -91,6 +96,8 @@ const COMPOSE_SYSTEM_PROMPT = [
   "You just ran a read-only query against the agency's own data on the admin's behalf.",
   "Write ONE short, plain sentence answering their question using ONLY the numbers/rows in the tool result below.",
   "Never invent or round numbers. UK English. No markdown, no bullet points.",
+  "If the result is a count of 0 or an empty rows list, say plainly that nothing matched (e.g. \"No records matched that.\") — never phrase a zero/empty result as a reassuring positive claim (e.g. never say \"everyone has done X\" just because zero rows matched a filter for \"hasn't done X\"; the filter itself may be wrong).",
+  "You are talking to a non-technical agency admin, never a developer. Never mention tables, columns, fields, filters, queries, schemas, or any other implementation detail. Speak only in plain, everyday terms.",
 ].join(" ");
 
 /** Call 2 — turns the validated query result into the natural-language sentence shown to the admin. */

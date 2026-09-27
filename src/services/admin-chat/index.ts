@@ -7,6 +7,7 @@ import {
 } from "../../repositories/admin-chat.js";
 import { composeAnswerText, pickQuery } from "./claude-client.js";
 import { runValidatedQuery } from "./query-validator.js";
+import { findTableDef } from "./schema-catalog.js";
 import { env } from "../../config/env.js";
 import type { AdminChatAnswer, AdminChatRow } from "../../types/admin-chat.js";
 
@@ -21,7 +22,19 @@ function stringifyRow(row: Record<string, unknown>): AdminChatRow {
 }
 
 function humanizeTable(table: string): string {
-  return table.replace(/_/g, " ");
+  const displayLabel = findTableDef(table)?.displayLabel;
+  return displayLabel ?? table.replace(/_/g, " ");
+}
+
+function pluralizeWords(value: string): string {
+  const words = value.replace(/_/g, " ");
+  return words.endsWith("s") ? words : `${words}s`;
+}
+
+/** For a count query, prefer a human label from the role filter (e.g. role: "foster_carer" -> "foster carers") over the raw table name. */
+function statLabelFor(table: string, filters: Record<string, unknown> | undefined): string {
+  const role = filters?.role;
+  return typeof role === "string" && role ? pluralizeWords(role) : humanizeTable(table);
 }
 
 /** UTC calendar-day boundary. A rate-limit cap, not a safety boundary — exact UK midnight isn't needed. */
@@ -75,6 +88,7 @@ export async function askAdminChat(
       question,
       matched_table: null,
       matched_aggregation: null,
+      matched_query: null,
       answer: pick.declineText,
       error: null,
     });
@@ -94,6 +108,7 @@ export async function askAdminChat(
       question,
       matched_table: pick.toolCall.table,
       matched_aggregation: pick.toolCall.aggregation,
+      matched_query: pick.toolCall,
       answer: null,
       error: validated.reason,
     });
@@ -118,7 +133,7 @@ export async function askAdminChat(
           stats: [
             {
               value: String(validated.result.count),
-              label: humanizeTable(pick.toolCall.table),
+              label: statLabelFor(pick.toolCall.table, pick.toolCall.filters),
             },
           ],
           rows: [],
@@ -135,6 +150,13 @@ export async function askAdminChat(
     question,
     matched_table: pick.toolCall.table,
     matched_aggregation: pick.toolCall.aggregation,
+    matched_query: {
+      ...pick.toolCall,
+      resultCount:
+        validated.result.kind === "count"
+          ? validated.result.count
+          : validated.result.rows.length,
+    },
     answer: answerText,
     error: null,
   });
