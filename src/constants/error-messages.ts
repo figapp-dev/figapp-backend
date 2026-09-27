@@ -180,4 +180,12 @@ export const ErrorMessages = {
     "Cannot add seats until the first Direct Debit has confirmed and a billing period exists",
   BILLING_SEAT_NO_MANDATE: "Set up Direct Debit before buying extra seats",
   BILLING_SEAT_EXEMPT: "Exempt agencies do not buy extra seats via GoCardless",
+
+  ADMIN_CHAT_FORBIDDEN: "Only an agency admin can use Ask Figgy",
+  ADMIN_CHAT_AGENCY_NOT_RESOLVED: "Agency not resolved for user",
+  ADMIN_CHAT_INVALID_BODY: "question is required",
+  ADMIN_CHAT_RATE_LIMITED:
+    "You've reached today's question limit for Ask Figgy. Try again tomorrow.",
+  ADMIN_CHAT_NOT_CONFIGURED: "Ask Figgy is not configured on this server",
+  ADMIN_CHAT_FAILED: "Ask Figgy could not answer that question",
 } as const;

@@ -99,4 +99,15 @@ export const env = {
   webAppUrl: (
     process.env.WEB_APP_URL?.trim() || "https://www.figapp.co.uk"
   ).replace(/\/+$/, ""),
+  /**
+   * Ask Figgy (agency admin chat assistant). Same Anthropic key already used
+   * for the web app's ai-daily-log-assist Edge Function. Optional at boot so
+   * the rest of the server keeps working before the secret is set; the route
+   * itself returns 500 until it is.
+   */
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY?.trim() || "",
+  adminChatModel:
+    process.env.ANTHROPIC_ADMIN_CHAT_MODEL?.trim() || "claude-haiku-4-5",
+  /** Max questions per admin per UK calendar day, before Claude is even called. */
+  adminChatDailyLimit: Number(process.env.ADMIN_CHAT_DAILY_LIMIT) || 40,
 } as const;

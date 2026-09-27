@@ -8,6 +8,7 @@ export type ServiceFailureFlags = {
   forbidden?: boolean;
   badRequest?: boolean;
   conflict?: boolean;
+  rateLimited?: boolean;
   notEditable?: boolean;
   submitEmpty?: boolean;
   validationFailed?: boolean;
@@ -26,6 +27,7 @@ export type ServiceFailureResult = {
   forbidden: boolean;
   badRequest: boolean;
   conflict: boolean;
+  rateLimited: boolean;
   notEditable: boolean;
   submitEmpty: boolean;
   validationFailed: boolean;
@@ -45,6 +47,7 @@ export function serviceFailure(
     forbidden: flags.forbidden ?? false,
     badRequest: flags.badRequest ?? false,
     conflict: flags.conflict ?? false,
+    rateLimited: flags.rateLimited ?? false,
     notEditable: flags.notEditable ?? false,
     submitEmpty: flags.submitEmpty ?? false,
     validationFailed: flags.validationFailed ?? false,
@@ -62,6 +65,7 @@ export function serviceSuccess<T>(data: T): {
   forbidden: false;
   badRequest: false;
   conflict: false;
+  rateLimited: false;
   notEditable: false;
   submitEmpty: false;
   validationFailed: false;
@@ -77,6 +81,7 @@ export function serviceSuccess<T>(data: T): {
     forbidden: false,
     badRequest: false,
     conflict: false,
+    rateLimited: false,
     notEditable: false,
     submitEmpty: false,
     validationFailed: false,
