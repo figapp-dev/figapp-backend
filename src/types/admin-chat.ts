@@ -25,11 +25,18 @@ export type AdminChatAnswer = {
 
 export type QueryAggregation = "count" | "list";
 
+export type QueryDateRange = {
+  column: string;
+  from: string;
+  to: string;
+};
+
 /** The shape Claude fills in via the generic query tool. Never trusted as-is. */
 export type QueryToolCall = {
   table: string;
   aggregation: QueryAggregation;
   filters?: Record<string, string | number | boolean>;
+  date_range?: QueryDateRange;
   columns?: string[];
   limit?: number;
 };

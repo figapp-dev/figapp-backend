@@ -42,6 +42,7 @@ export type AdminChatLogInsert = {
   question: string;
   matched_table: string | null;
   matched_aggregation: string | null;
+  matched_query: Record<string, unknown> | null;
   answer: string | null;
   error: string | null;
 };
@@ -54,6 +55,12 @@ export async function insertAdminChatLog(
   return { error };
 }
 
+export type AllowlistedDateRange = {
+  column: string;
+  from: string;
+  to: string;
+};
+
 /**
  * Generic allowlisted-table access. Table name, column names, and filter
  * keys must already be validated against the schema catalog by the caller
@@ -63,10 +70,14 @@ export async function countAllowlistedRows(
   supabase: SupabaseClient,
   table: string,
   filters: Record<string, string | number | boolean>,
+  dateRange?: AllowlistedDateRange,
 ): Promise<{ count: number; error: Error | null }> {
   let query = supabase.from(table).select("id", { count: "exact", head: true });
   for (const [column, value] of Object.entries(filters)) {
     query = query.eq(column, value);
+  }
+  if (dateRange) {
+    query = query.gte(dateRange.column, dateRange.from).lte(dateRange.column, dateRange.to);
   }
   const { count, error } = await query;
   return { count: count ?? 0, error };
@@ -78,10 +89,14 @@ export async function listAllowlistedRows(
   columns: string[],
   filters: Record<string, string | number | boolean>,
   limit: number,
+  dateRange?: AllowlistedDateRange,
 ): Promise<{ data: Record<string, unknown>[]; error: Error | null }> {
   let query = supabase.from(table).select(columns.join(",")).limit(limit);
   for (const [column, value] of Object.entries(filters)) {
     query = query.eq(column, value);
+  }
+  if (dateRange) {
+    query = query.gte(dateRange.column, dateRange.from).lte(dateRange.column, dateRange.to);
   }
   const { data, error } = await query;
   return { data: (data as Record<string, unknown>[] | null) ?? [], error };
