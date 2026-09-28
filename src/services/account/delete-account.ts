@@ -1,24 +1,23 @@
-import { randomBytes } from "node:crypto";
 import { env } from "../../config/env.js";
 import { createServiceRoleClient } from "../../lib/supabase.js";
 import { TABLES } from "../../lib/tables.js";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
-
-function anonymisedEmail(userId: string): string {
-  return `deleted+${userId.replace(/-/g, "")}@deleted.figapp.invalid`;
-}
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 /**
- * Soft-close the signed-in user's account for store / GDPR compliance.
+ * Deactivate the signed-in user's account (App Store / Play Store require an
+ * in-app account-deletion path). This is a reversible flag, not an erasure:
+ * no profile fields are changed, login is blocked, and household membership
+ * ends. An agency admin can restore it later (see restore-account.ts) after
+ * confirming with the person — this is disclosed to the user in the app's
+ * delete-account confirmation copy, not a hidden behavior.
  *
- * Does NOT call auth.admin.deleteUser — agency_users and care records
- * (e.g. daily_logs.author_id) CASCADE on auth.users delete. Instead we
- * archive + anonymise the agency_users row, end household memberships,
- * free the login email, and ban the Auth user so they cannot sign in.
+ * Does NOT call auth.admin.deleteUser — agency_users and care records (e.g.
+ * daily_logs.author_id) CASCADE on auth.users delete, which would destroy
+ * legally-retained safeguarding records.
  */
 export async function deleteAccount(userId: string) {
   if (!userId) {
@@ -31,12 +30,11 @@ export async function deleteAccount(userId: string) {
   }
 
   const admin = createServiceRoleClient();
-  const closedEmail = anonymisedEmail(userId);
   const now = new Date().toISOString();
 
   const { data: existing, error: loadError } = await admin
     .from(TABLES.AGENCY_USERS)
-    .select("id, user_id, email, is_archived")
+    .select("id, user_id, is_archived")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -47,18 +45,9 @@ export async function deleteAccount(userId: string) {
     return serviceFailure({ notFound: true });
   }
 
-  const { error: archiveError } = await admin
+  const { error: deactivateError } = await admin
     .from(TABLES.AGENCY_USERS)
     .update({
-      email: closedEmail,
-      first_name: "Deleted",
-      last_name: "User",
-      preferred_name: null,
-      phone: null,
-      date_of_birth: null,
-      gender: null,
-      position: null,
-      job_title: null,
       household_id: null,
       is_active: false,
       is_archived: true,
@@ -68,8 +57,8 @@ export async function deleteAccount(userId: string) {
     })
     .eq("user_id", userId);
 
-  if (archiveError) {
-    return serviceFailure({ error: archiveError });
+  if (deactivateError) {
+    return serviceFailure({ error: deactivateError });
   }
 
   const { error: householdError } = await admin
@@ -86,12 +75,8 @@ export async function deleteAccount(userId: string) {
     return serviceFailure({ error: householdError });
   }
 
-  const randomPassword = randomBytes(32).toString("base64url");
   const { error: authError } = await admin.auth.admin.updateUserById(userId, {
-    email: closedEmail,
-    password: randomPassword,
     ban_duration: "876600h",
-    email_confirm: true,
   });
 
   if (authError) {
