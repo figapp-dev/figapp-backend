@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 const nullableString = { type: "string", nullable: true } as const;
 const nullableBoolean = { type: "boolean", nullable: true } as const;
+const nullableNumber = { type: "number", nullable: true } as const;
 
 /** Shared OpenAPI / Fastify JSON Schema components ($id) for Swagger + route responses. */
 export function registerOpenApiSchemas(app: FastifyInstance) {
@@ -1056,11 +1057,12 @@ export function registerOpenApiSchemas(app: FastifyInstance) {
   app.addSchema({
     $id: "CalendarEligibleChildDto",
     type: "object",
-    required: ["id", "displayName", "figappId"],
+    required: ["id", "displayName", "figappId", "age"],
     properties: {
       id: { type: "string" },
       displayName: { type: "string" },
       figappId: nullableString,
+      age: nullableNumber,
     },
   });
 

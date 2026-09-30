@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
-import { getActiveHouseholdIds } from "../../lib/households.js";
+import { resolveActiveHouseholdIdsForCaller } from "../../lib/households.js";
+import { canRoleAddLifeStoryEntry } from "../../lib/life-story-permissions.js";
 import { assertChildAccessibleToCarer } from "../children/shared.js";
 import {
   findChildLifeStoryData,
@@ -60,12 +61,13 @@ export async function addLifeStoryEntryForCarer(
     mediaType = inferLifeStoryMediaType(media.name, media.contentType);
   }
 
-  const { householdIds, error: householdError } = await getActiveHouseholdIds(
-    supabase,
-    userId,
-  );
+  const { householdIds, role, error: householdError } =
+    await resolveActiveHouseholdIdsForCaller(supabase, userId);
   if (householdError) {
     return serviceFailure({ error: householdError });
+  }
+  if (!canRoleAddLifeStoryEntry(role)) {
+    return serviceFailure({ forbidden: true });
   }
 
   const { allowed, error: accessError } = await assertChildAccessibleToCarer(

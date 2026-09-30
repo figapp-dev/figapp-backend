@@ -41,6 +41,15 @@ export function isDailyLogEditable(options: {
 }
 
 /**
+ * social_worker/sw_manager are review-only for daily logs — never allowed
+ * to edit, regardless of the log's own status/date. Every other role keeps
+ * today's date/status-driven isDailyLogEditable result.
+ */
+export function canRoleEditDailyLogs(role: string | null | undefined): boolean {
+  return role !== "social_worker" && role !== "sw_manager";
+}
+
+/**
  * Overdue only after the assigned UK calendar day has passed.
  * Same-day logs are never overdue (due_time ignored). Matches web.
  */

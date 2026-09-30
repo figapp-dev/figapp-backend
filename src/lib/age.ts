@@ -36,3 +36,14 @@ export function isBiologicalParentUnder18(
   if (age == null) return false;
   return age > 0 && age <= 18;
 }
+
+/** Matches web's `calculateAge(...) >= 13` check in AddEventDialog.tsx,
+ * used on top of the `child_ovr13` row filters to build the calendar
+ * event-tagging "Children (Age 13+ with Portal Access)" list. */
+export function isPortalEligibleChildAge(
+  dateOfBirth: string | null | undefined,
+  onDate: Date = new Date(),
+): boolean {
+  const age = calculateAgeYears(dateOfBirth, onDate);
+  return age != null && age >= 13;
+}

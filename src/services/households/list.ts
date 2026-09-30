@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getCarerHouseholdIds } from "../../lib/households.js";
+import { resolveHouseholdIdsForCaller } from "../../lib/households.js";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
 import { toHouseholdListItemDto } from "../../mappers/households.js";
 import {
@@ -14,7 +14,7 @@ export async function listHouseholdsForCarer(
   supabase: SupabaseClient,
   userId: string,
 ) {
-  const { householdIds, error: idsError } = await getCarerHouseholdIds(
+  const { householdIds, error: idsError } = await resolveHouseholdIdsForCaller(
     supabase,
     userId,
   );

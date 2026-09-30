@@ -48,6 +48,12 @@ export const ErrorMessages = {
     "expectedUpdatedAt is required when the log already exists (use log.updatedAt from the last GET/PUT)",
   DAILY_LOG_CONFLICT:
     "Daily log was updated elsewhere. Reload and try again.",
+  DAILY_LOG_SENSITIVITY_FORBIDDEN:
+    "Only a social worker or sw_manager can mark a caseload member's log as sensitive",
+  DAILY_LOG_SENSITIVITY_NOT_STARTED:
+    "This log hasn't been started yet, so there's nothing to mark as sensitive.",
+  DAILY_LOG_SENSITIVITY_WINDOW_CLOSED:
+    "This log was completed more than 7 days ago and can no longer be marked as sensitive.",
   VALIDATION_ERROR: "Request validation failed",
 
   FILE_UPLOAD_FAILED: "Failed to create upload URL",
@@ -184,6 +190,19 @@ export const ErrorMessages = {
     "Cannot add seats until the first Direct Debit has confirmed and a billing period exists",
   BILLING_SEAT_NO_MANDATE: "Set up Direct Debit before buying extra seats",
   BILLING_SEAT_EXEMPT: "Exempt agencies do not buy extra seats via GoCardless",
+
+  TEAM_DASHBOARD_FORBIDDEN:
+    "Only a social worker or sw_manager can view the team dashboard",
+  TEAM_DASHBOARD_LOAD_FAILED: "Failed to load the team dashboard",
+
+  FOSTER_CARERS_FORBIDDEN:
+    "Only a social worker or sw_manager can view foster carers",
+  FOSTER_CARERS_LOAD_FAILED: "Failed to load foster carers",
+  FOSTER_CARER_NOT_FOUND: "Foster carer not found",
+  FOSTER_CARER_LOAD_FAILED: "Failed to load foster carer",
+
+  SOCIAL_WORKERS_FORBIDDEN: "Only an sw_manager can view social workers",
+  SOCIAL_WORKERS_LOAD_FAILED: "Failed to load social workers",
 
   ADMIN_CHAT_FORBIDDEN: "Only an agency admin can use Ask Figgy",
   ADMIN_CHAT_AGENCY_NOT_RESOLVED: "Agency not resolved for user",

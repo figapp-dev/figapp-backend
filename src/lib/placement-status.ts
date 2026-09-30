@@ -52,6 +52,21 @@ export function isActiveHouseholdLinkForToday(row?: {
 }
 
 /**
+ * Whether a carer_households row counts as an active household. Matches
+ * web's isActiveHousehold (DashboardContent.tsx) — status is a free-text
+ * field defaulting to "active", so blank/unset also counts as active.
+ */
+export function isActiveHousehold(row?: {
+  status?: string | null;
+  is_active?: boolean | null;
+}): boolean {
+  if (!row) return false;
+  if (row.is_active === false) return false;
+  const status = String(row.status ?? "").trim().toLowerCase();
+  return status === "" || status === "active";
+}
+
+/**
  * UI status for a placement row. Uses UK dates and is_active.
  * Same rules as web getPlacementDisplayStatus.
  */

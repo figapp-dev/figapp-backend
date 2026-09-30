@@ -1,9 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  canRoleEditDailyLogs,
   isDailyLogEditable,
   isDailyLogOverdue,
   isCompletedOrSubmitted,
 } from "../../src/lib/daily-log-status.js";
+
+describe("canRoleEditDailyLogs", () => {
+  it("blocks social_worker and sw_manager", () => {
+    expect(canRoleEditDailyLogs("social_worker")).toBe(false);
+    expect(canRoleEditDailyLogs("sw_manager")).toBe(false);
+  });
+
+  it("allows foster_carer and every other role", () => {
+    expect(canRoleEditDailyLogs("foster_carer")).toBe(true);
+    expect(canRoleEditDailyLogs("agency_admin")).toBe(true);
+    expect(canRoleEditDailyLogs(null)).toBe(true);
+  });
+});
 
 describe("isCompletedOrSubmitted", () => {
   it("detects completed and submitted", () => {

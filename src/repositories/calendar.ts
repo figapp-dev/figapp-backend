@@ -377,6 +377,65 @@ export async function listAgencyUsersByRole(
   return { data: (data ?? []) as AgencyUserRow[], error: null };
 }
 
+export type PortalEligibleChildRow = {
+  id: string;
+  legal_name: string | null;
+  preferred_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  figapp_id: string | null;
+  date_of_birth: string | null;
+};
+
+/** Children with their own portal login, agency-wide — mirrors the
+ * `child_ovr13` query in AddEventDialog.tsx's non-foster-carer branch
+ * exactly (table, columns, filters), for the social_worker/sw_manager
+ * event-tagging picker. `child_ovr13` is a separate table from `children`
+ * (child-portal-account rows), not a view over it. The age >= 13 part of
+ * web's filter is applied by the caller via `isPortalEligibleChildAge`,
+ * since it depends on "now" and isn't expressible as a DB filter here. */
+export async function listAgencyPortalEligibleChildren(
+  supabase: SupabaseClient,
+  agencyId: string,
+): Promise<{ data: PortalEligibleChildRow[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.CHILD_OVR13)
+    .select(
+      "id, legal_name, preferred_name, first_name, last_name, figapp_id, date_of_birth",
+    )
+    .eq("agency_id", agencyId)
+    .eq("status", "active")
+    .eq("portal_access_enabled", true)
+    .not("date_of_birth", "is", null)
+    .order("legal_name");
+
+  if (error) return { data: [], error };
+  return { data: (data ?? []) as PortalEligibleChildRow[], error: null };
+}
+
+/** Every active agency user in the given roles, agency-wide (no caseload/household
+ * scoping) — for the social_worker/sw_manager event-invite picker, which on web
+ * (AddEventDialog.tsx's non-foster-carer branch) is deliberately agency-wide, not
+ * caseload-scoped. */
+export async function listActiveAgencyUsersByRoles(
+  supabase: SupabaseClient,
+  agencyId: string,
+  roles: string[],
+  excludeUserId: string,
+): Promise<{ data: AgencyUserRow[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.AGENCY_USERS)
+    .select("user_id, first_name, last_name, role, figapp_id")
+    .eq("agency_id", agencyId)
+    .eq("is_active", true)
+    .in("role", roles)
+    .neq("user_id", excludeUserId)
+    .order("first_name");
+
+  if (error) return { data: [], error };
+  return { data: (data ?? []) as AgencyUserRow[], error: null };
+}
+
 export async function listOtherActiveHouseholdCarerUserIds(
   supabase: SupabaseClient,
   householdIds: string[],

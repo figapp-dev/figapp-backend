@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveEducationArrangementForLog } from "../../lib/education-arrangements.js";
-import { getActiveHouseholdIds } from "../../lib/households.js";
+import { resolveActiveHouseholdIdsForCaller } from "../../lib/households.js";
 import {
   pickLogForAssignment,
   toDailyLogDetailDto,
@@ -23,10 +23,8 @@ export async function getDailyLogForCarer(
   userId: string,
   assignmentId: string,
 ): Promise<{ data: DailyLogDetailDto | null; error: Error | null }> {
-  const { householdIds, error: householdError } = await getActiveHouseholdIds(
-    supabase,
-    userId,
-  );
+  const { householdIds, role, error: householdError } =
+    await resolveActiveHouseholdIdsForCaller(supabase, userId);
   if (householdError) {
     return { data: null, error: householdError };
   }
@@ -84,6 +82,7 @@ export async function getDailyLogForCarer(
       contributorsResult.data,
       educationArrangement,
       parentingAssessmentSection,
+      role,
     ),
     error: null,
   };

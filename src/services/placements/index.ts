@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getCarerHouseholdIds } from "../../lib/households.js";
+import { resolveHouseholdIdsForCaller } from "../../lib/households.js";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
 import {
   placementTypesMap,
@@ -66,7 +66,7 @@ export async function listPlacementsForCarer(
   supabase: SupabaseClient,
   userId: string,
 ) {
-  const { householdIds, error: idsError } = await getCarerHouseholdIds(
+  const { householdIds, error: idsError } = await resolveHouseholdIdsForCaller(
     supabase,
     userId,
   );
@@ -159,7 +159,7 @@ export async function getPlacementDetailForCarer(
     return serviceFailure({ badRequest: true });
   }
 
-  const { householdIds, error: idsError } = await getCarerHouseholdIds(
+  const { householdIds, error: idsError } = await resolveHouseholdIdsForCaller(
     supabase,
     userId,
   );

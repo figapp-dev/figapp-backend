@@ -1,5 +1,9 @@
 import { toDateOnly } from "../lib/dates.js";
-import { isDailyLogEditable, isDailyLogOverdue } from "../lib/daily-log-status.js";
+import {
+  canRoleEditDailyLogs,
+  isDailyLogEditable,
+  isDailyLogOverdue,
+} from "../lib/daily-log-status.js";
 import { isPlainObject } from "../lib/objects.js";
 import { insertParentingAssessmentSection } from "../lib/parenting-assessment.js";
 import type {
@@ -28,6 +32,7 @@ function asObject(value: unknown): Record<string, unknown> {
 export function toDailyLogListItemDto(
   row: DailyLogAssignmentListRow,
   subjectName: string | null,
+  callerRole: string | null = null,
 ): DailyLogListItemDto {
   const template = firstOrNull<DailyLogTemplateSummaryRow>(
     row.daily_log_templates,
@@ -51,7 +56,7 @@ export function toDailyLogListItemDto(
     dueTime: row.due_time == null ? null : String(row.due_time),
     completedAt: row.completed_at == null ? null : String(row.completed_at),
     subjectName,
-    canEdit: isDailyLogEditable(editOptions),
+    canEdit: canRoleEditDailyLogs(callerRole) && isDailyLogEditable(editOptions),
     isOverdue: isDailyLogOverdue(editOptions),
     template: template ? { id: template.id, name: template.name } : null,
     log: log ? { id: log.id, status: log.status } : null,
@@ -117,6 +122,7 @@ export function toDailyLogDetailDto(
   contributors: DailyLogContributorDto[] = [],
   educationArrangement: string | null = null,
   parentingAssessmentSection: Record<string, unknown> | null = null,
+  callerRole: string | null = null,
 ): DailyLogDetailDto {
   const template = firstOrNull<DailyLogTemplateDetailRow>(
     row.daily_log_templates,
@@ -141,7 +147,7 @@ export function toDailyLogDetailDto(
     completedAt: row.completed_at,
     subjectName,
     educationArrangement,
-    canEdit: isDailyLogEditable(editOptions),
+    canEdit: canRoleEditDailyLogs(callerRole) && isDailyLogEditable(editOptions),
     isOverdue: isDailyLogOverdue(editOptions),
     template: toTemplateDetailDto(template, parentingAssessmentSection),
     log: toLogDetailDto(log),

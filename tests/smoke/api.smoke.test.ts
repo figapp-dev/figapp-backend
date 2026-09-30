@@ -43,6 +43,16 @@ describe("API smoke", () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it("POST /daily-logs/:id/sensitive without auth returns 401", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/daily-logs/00000000-0000-0000-0000-000000000001/sensitive",
+      headers: { "content-type": "application/json" },
+      payload: { isSensitive: true },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
   it("GET /daily-log-catalog without auth returns 401", async () => {
     const res = await app.inject({ method: "GET", url: "/daily-log-catalog" });
     expect(res.statusCode).toBe(401);
@@ -68,6 +78,29 @@ describe("API smoke", () => {
       method: "GET",
       url: "/households/00000000-0000-0000-0000-000000000001",
     });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("GET /team-dashboard without auth returns 401", async () => {
+    const res = await app.inject({ method: "GET", url: "/team-dashboard" });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("GET /foster-carers without auth returns 401", async () => {
+    const res = await app.inject({ method: "GET", url: "/foster-carers" });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("GET /foster-carers/:userId without auth returns 401", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/foster-carers/00000000-0000-0000-0000-000000000001",
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("GET /social-workers without auth returns 401", async () => {
+    const res = await app.inject({ method: "GET", url: "/social-workers" });
     expect(res.statusCode).toBe(401);
   });
 

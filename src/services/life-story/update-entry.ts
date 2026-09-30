@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
-import { getActiveHouseholdIds } from "../../lib/households.js";
+import { resolveActiveHouseholdIdsForCaller } from "../../lib/households.js";
 import { assertChildAccessibleToCarer } from "../children/shared.js";
 import {
   findChildLifeStoryData,
@@ -26,10 +26,8 @@ async function loadAccessibleEntries(
   userId: string,
   childId: string,
 ) {
-  const { householdIds, error: householdError } = await getActiveHouseholdIds(
-    supabase,
-    userId,
-  );
+  const { householdIds, error: householdError } =
+    await resolveActiveHouseholdIdsForCaller(supabase, userId);
   if (householdError) {
     return { error: householdError, forbidden: false, data: null };
   }

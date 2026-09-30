@@ -5,6 +5,7 @@ import {
   getDailyLogForCarer,
   listDailyLogsForCarer,
   saveDailyLogForCarer,
+  toggleDailyLogSensitivityForStaff,
 } from "../services/daily-logs/index.js";
 import {
   badRequest,
@@ -16,7 +17,10 @@ import {
   validationFailed,
 } from "../lib/errors.js";
 import { ErrorMessages } from "../constants/error-messages.js";
-import { saveDailyLogBodySchema } from "../schemas/daily-logs.js";
+import {
+  saveDailyLogBodySchema,
+  toggleDailyLogSensitivityBodySchema,
+} from "../schemas/daily-logs.js";
 import type { SaveDailyLogBody } from "../types/daily-logs.js";
 
 const dailyLogsListResponseSchema = {
@@ -274,6 +278,64 @@ export async function dailyLogsRoute(app: FastifyInstance) {
       }
       if (result.notEditable) {
         throw forbidden(ErrorMessages.DAILY_LOG_NOT_EDITABLE);
+      }
+      if (result.notFound) {
+        throw notFound(ErrorMessages.DAILY_LOG_NOT_FOUND);
+      }
+      if (result.error || !result.data) {
+        request.log.error(result.error);
+        throw internalError(ErrorMessages.DAILY_LOG_SAVE_FAILED);
+      }
+
+      return result.data;
+    },
+  );
+
+  app.post<{ Params: { id: string }; Body: { isSensitive: boolean } }>(
+    "/daily-logs/:id/sensitive",
+    {
+      schema: {
+        tags: ["daily-logs"],
+        summary:
+          "Toggle 'Mark as Sensitive' on a caseload member's log — the one " +
+          "mutation a social_worker/sw_manager has; every other daily-logs " +
+          "action stays foster_carer-only",
+        security: [...bearerSecurity],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "string" } },
+        },
+        body: toggleDailyLogSensitivityBodySchema,
+        response: {
+          200: {
+            type: "object",
+            required: ["isSensitive", "updatedAt"],
+            properties: {
+              isSensitive: { type: "boolean" },
+              updatedAt: { type: "string" },
+            },
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const result = await toggleDailyLogSensitivityForStaff(
+        request.supabase,
+        request.user.id,
+        request.params.id,
+        request.body.isSensitive,
+      );
+
+      if (result.forbidden) {
+        throw forbidden(ErrorMessages.DAILY_LOG_SENSITIVITY_FORBIDDEN);
+      }
+      if (result.notEditable) {
+        throw forbidden(ErrorMessages.DAILY_LOG_SENSITIVITY_WINDOW_CLOSED);
+      }
+      if (result.notStarted) {
+        throw forbidden(ErrorMessages.DAILY_LOG_SENSITIVITY_NOT_STARTED);
       }
       if (result.notFound) {
         throw notFound(ErrorMessages.DAILY_LOG_NOT_FOUND);
