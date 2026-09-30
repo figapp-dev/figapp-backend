@@ -247,7 +247,7 @@ describe("catalog: Section 6 -- Incidents & final comments", () => {
     expect(resolveVisible(dailyLogCatalog.fields.incidents, { answers: {} })).toBe(true);
     expect(resolveVisible(dailyLogCatalog.fields.other_comments, { answers: {} })).toBe(true);
     expect(resolveQuestion(dailyLogCatalog.fields.other_comments, { answers: {} }, tokens)).toBe(
-      "Anything else you'd like to add about Test Eleven's day?",
+      "Would you like to add anything else about Test Eleven's day?",
     );
   });
 

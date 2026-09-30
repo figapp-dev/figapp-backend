@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
-import { getActiveHouseholdIds } from "../../lib/households.js";
+import { resolveActiveHouseholdIdsForCaller } from "../../lib/households.js";
 import { assertChildAccessibleToCarer } from "../children/shared.js";
 import { findChildLifeStoryData } from "../../repositories/life-story.js";
 import { sortLifeStoryEntries, toLifeStoryEntryDto } from "../../mappers/life-story.js";
@@ -18,10 +18,8 @@ export async function listLifeStoryForCarer(
   | ReturnType<typeof serviceFailure>
   | ReturnType<typeof serviceSuccess<LifeStoryListDto>>
 > {
-  const { householdIds, error: householdError } = await getActiveHouseholdIds(
-    supabase,
-    userId,
-  );
+  const { householdIds, error: householdError } =
+    await resolveActiveHouseholdIdsForCaller(supabase, userId);
   if (householdError) {
     return serviceFailure({ error: householdError });
   }

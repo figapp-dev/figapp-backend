@@ -10,6 +10,9 @@ export type ServiceFailureFlags = {
   conflict?: boolean;
   rateLimited?: boolean;
   notEditable?: boolean;
+  /** Assignment exists and is in the caller's scope, but no daily_logs row
+   * has been created yet (carer hasn't started it) — nothing to act on. */
+  notStarted?: boolean;
   submitEmpty?: boolean;
   validationFailed?: boolean;
   unsupported?: boolean;
@@ -29,6 +32,7 @@ export type ServiceFailureResult = {
   conflict: boolean;
   rateLimited: boolean;
   notEditable: boolean;
+  notStarted: boolean;
   submitEmpty: boolean;
   validationFailed: boolean;
   unsupported: boolean;
@@ -49,6 +53,7 @@ export function serviceFailure(
     conflict: flags.conflict ?? false,
     rateLimited: flags.rateLimited ?? false,
     notEditable: flags.notEditable ?? false,
+    notStarted: flags.notStarted ?? false,
     submitEmpty: flags.submitEmpty ?? false,
     validationFailed: flags.validationFailed ?? false,
     unsupported: flags.unsupported ?? false,
@@ -67,6 +72,7 @@ export function serviceSuccess<T>(data: T): {
   conflict: false;
   rateLimited: false;
   notEditable: false;
+  notStarted: false;
   submitEmpty: false;
   validationFailed: false;
   unsupported: false;
@@ -83,6 +89,7 @@ export function serviceSuccess<T>(data: T): {
     conflict: false,
     rateLimited: false,
     notEditable: false,
+    notStarted: false,
     submitEmpty: false,
     validationFailed: false,
     unsupported: false,

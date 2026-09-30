@@ -4,7 +4,7 @@ import { bearerSecurity, errorResponses } from "../plugins/swagger.js";
 import {
   createEventForCarer,
   deleteEventForCarer,
-  getEligibleParticipantsForCarer,
+  getEligibleParticipantsForCaller,
   getEventForCarer,
   listEventsForCarer,
   rsvpToEventForCarer,
@@ -81,7 +81,7 @@ export async function calendarRoute(app: FastifyInstance) {
       },
     },
     async (request) => {
-      const result = await getEligibleParticipantsForCarer(
+      const result = await getEligibleParticipantsForCaller(
         request.supabase,
         request.user.id,
       );

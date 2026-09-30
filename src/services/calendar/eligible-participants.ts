@@ -1,11 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
+import { resolveCallerContext } from "../../lib/caller-context.js";
+import { isPortalEligibleChildAge } from "../../lib/age.js";
 import { toEligibleChildDto, toEligibleUserDto } from "../../mappers/calendar.js";
 import { listChildrenByIds } from "../../repositories/children.js";
 import {
   findManagerId,
   findOwnAgencyId,
   findOwnSocialWorkerId,
+  listActiveAgencyUsersByRoles,
+  listAgencyPortalEligibleChildren,
   listAgencyUsersByRole,
   listHouseholdCarerLinksForUser,
   listOtherActiveHouseholdCarerUserIds,
@@ -13,6 +17,8 @@ import {
 } from "../../repositories/calendar.js";
 import { getActiveChildPlacements } from "../children/shared.js";
 import type { EligibleParticipantsDto } from "../../types/calendar.js";
+
+const SUPERVISORY_ROLES = new Set(["social_worker", "sw_manager"]);
 
 export type EligibleParticipantsResult =
   | ReturnType<typeof serviceFailure>
@@ -126,4 +132,63 @@ export async function getEligibleParticipantsForCarer(
     linkedCarers: linkedCarersResult.data.map(toEligibleUserDto),
     socialWorkers: socialWorkersResult.data.map(toEligibleUserDto),
   });
+}
+
+/** Who a social_worker/sw_manager can tag/invite when creating an event —
+ * mirrors the non-foster-carer branch of `fetchUsersAndChildren` in
+ * figapp-new/modules/events/components/AddEventDialog.tsx:
+ *   - linkedCarers/socialWorkers: the caller's entire agency roster (foster
+ *     carers, and separately social_worker/sw_manager), excluding
+ *     super_admin/app_admin and the caller themself. Deliberately
+ *     agency-wide, NOT caseload-scoped — confirmed against web's source —
+ *     unlike every other social_worker/sw_manager endpoint in this backend.
+ *   - children (tag only, same as the carer branch): web's "Children (Age
+ *     13+ with Portal Access)" list — `child_ovr13` rows (a separate
+ *     child-portal-login table, not the `children` table), agency-wide,
+ *     filtered to active + portal_access_enabled + age >= 13. */
+async function getEligibleParticipantsForSupervisor(
+  supabase: SupabaseClient,
+  userId: string,
+  agencyId: string,
+): Promise<EligibleParticipantsResult> {
+  const [carersResult, staffResult, childrenResult] = await Promise.all([
+    listActiveAgencyUsersByRoles(supabase, agencyId, ["foster_carer"], userId),
+    listActiveAgencyUsersByRoles(
+      supabase,
+      agencyId,
+      ["social_worker", "sw_manager"],
+      userId,
+    ),
+    listAgencyPortalEligibleChildren(supabase, agencyId),
+  ]);
+  if (carersResult.error) return serviceFailure({ error: carersResult.error });
+  if (staffResult.error) return serviceFailure({ error: staffResult.error });
+  if (childrenResult.error) return serviceFailure({ error: childrenResult.error });
+
+  const children = childrenResult.data
+    .filter((child) => isPortalEligibleChildAge(child.date_of_birth))
+    .map(toEligibleChildDto);
+
+  return serviceSuccess({
+    children,
+    linkedCarers: carersResult.data.map(toEligibleUserDto),
+    socialWorkers: staffResult.data.map(toEligibleUserDto),
+  });
+}
+
+/** Entry point the route calls — branches on the caller's own role. */
+export async function getEligibleParticipantsForCaller(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<EligibleParticipantsResult> {
+  const callerRes = await resolveCallerContext(supabase, userId);
+  if (callerRes.error) return serviceFailure({ error: callerRes.error });
+
+  const caller = callerRes.data;
+  if (caller && SUPERVISORY_ROLES.has(caller.role ?? "")) {
+    if (!caller.agencyId) return serviceSuccess(EMPTY);
+    return getEligibleParticipantsForSupervisor(supabase, userId, caller.agencyId);
+  }
+
+  return getEligibleParticipantsForCarer(supabase, userId);
 }

@@ -1,3 +1,4 @@
+import { calculateAgeYears } from "../lib/age.js";
 import type {
   EligibleChildDto,
   EligibleUserDto,
@@ -106,13 +107,19 @@ export function toEligibleChildDto(child: {
   first_name: string | null;
   last_name: string | null;
   figapp_id: string | null;
+  date_of_birth?: string | null;
 }): EligibleChildDto {
   const displayName =
     child.preferred_name?.trim() ||
     child.legal_name?.trim() ||
     [child.first_name, child.last_name].filter(Boolean).join(" ").trim() ||
     "Unnamed child";
-  return { id: child.id, displayName, figappId: child.figapp_id };
+  return {
+    id: child.id,
+    displayName,
+    figappId: child.figapp_id,
+    age: calculateAgeYears(child.date_of_birth),
+  };
 }
 
 export function toEligibleUserDto(user: {

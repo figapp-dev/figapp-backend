@@ -138,6 +138,7 @@ export type EligibleChildDto = {
   id: string;
   displayName: string;
   figappId: string | null;
+  age: number | null;
 };
 
 export type EligibleUserDto = {

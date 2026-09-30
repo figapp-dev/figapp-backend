@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { filterAssignmentsToActivePlacements } from "../../lib/daily-log-placements.js";
-import { getCarerHouseholdIds } from "../../lib/households.js";
+import { resolveHouseholdIdsForCaller } from "../../lib/households.js";
 import { toDailyLogListItemDto } from "../../mappers/daily-logs.js";
 import {
   fetchChildPlacementsForHouseholds,
@@ -33,7 +33,7 @@ export async function listDailyLogsForCarer(
     return { data: null, error: null, badRequest: true };
   }
 
-  const { householdIds, error: householdError } = await getCarerHouseholdIds(
+  const { householdIds, role, error: householdError } = await resolveHouseholdIdsForCaller(
     supabase,
     userId,
   );
@@ -70,7 +70,7 @@ export async function listDailyLogsForCarer(
       ? listed.data
       : await filterToActivePlacements(supabase, householdIds, listed.data);
 
-  const mapped = await mapAssignmentRows(supabase, rowsForKind);
+  const mapped = await mapAssignmentRows(supabase, rowsForKind, role);
   if (mapped.error) {
     return { data: null, error: mapped.error };
   }
@@ -106,6 +106,7 @@ async function filterToActivePlacements(
 async function mapAssignmentRows(
   supabase: SupabaseClient,
   rows: DailyLogAssignmentListRow[],
+  callerRole: string | null,
 ): Promise<{ items: DailyLogsListDto["items"]; error: Error | null }> {
   if (rows.length === 0) {
     return { items: [], error: null };
@@ -118,6 +119,7 @@ async function mapAssignmentRows(
       toDailyLogListItemDto(
         row,
         resolveSubjectName(row, childNames, parentNames),
+        callerRole,
       ),
     ),
     error: null,

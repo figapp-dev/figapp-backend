@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getActiveHouseholdIds } from "../../lib/households.js";
+import { resolveActiveHouseholdIdsForCaller } from "../../lib/households.js";
 import { isBiologicalParentUnder18 } from "../../lib/age.js";
 import { isCurrentlyActivePlacement } from "../../lib/placement-status.js";
 import type {
@@ -127,10 +127,8 @@ export async function listChildrenForCarer(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{ data: ChildrenListDto | null; error: Error | null }> {
-  const { householdIds, error: householdError } = await getActiveHouseholdIds(
-    supabase,
-    userId,
-  );
+  const { householdIds, error: householdError } =
+    await resolveActiveHouseholdIdsForCaller(supabase, userId);
   if (householdError) {
     return { data: null, error: householdError };
   }

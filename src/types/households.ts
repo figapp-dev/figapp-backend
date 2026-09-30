@@ -4,6 +4,7 @@ export type HouseholdRow = {
   agency_id?: string | null;
   name: string | null;
   status: string | null;
+  is_active?: boolean | null;
   max_children: number | null;
   address_line1: string | null;
   address_line2: string | null;

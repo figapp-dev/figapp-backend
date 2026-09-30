@@ -18,7 +18,7 @@ export async function listHouseholdsByIds(
   const { data, error } = await supabase
     .from(TABLES.CARER_HOUSEHOLDS)
     .select(
-      "id, household_id_system, agency_id, name, status, max_children, address_line1, address_line2, city, postal_code, country, created_at",
+      "id, household_id_system, agency_id, name, status, is_active, max_children, address_line1, address_line2, city, postal_code, country, created_at",
     )
     .in("id", householdIds)
     .order("name", { ascending: true });

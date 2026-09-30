@@ -30,3 +30,13 @@ export const saveDailyLogBodySchema = {
     },
   },
 } as const;
+
+/** Fastify JSON Schema for POST /daily-logs/:id/sensitive body. */
+export const toggleDailyLogSensitivityBodySchema = {
+  type: "object",
+  required: ["isSensitive"],
+  additionalProperties: false,
+  properties: {
+    isSensitive: { type: "boolean" },
+  },
+} as const;
