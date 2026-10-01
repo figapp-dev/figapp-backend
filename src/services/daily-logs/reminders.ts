@@ -484,11 +484,7 @@ export async function runMonthlySwManagerReminders(
   supabase: SupabaseClient,
 ): Promise<ReminderRunResult> {
   const periodKey = ukMonthPeriodKey();
-  const managers = await listActiveStaffByRole(supabase, [
-    "sw_manager",
-    "social_worker_manager",
-    "social_work_manager",
-  ]);
+  const managers = await listActiveStaffByRole(supabase, ["sw_manager"]);
   const socialWorkers = await listActiveStaffByRole(supabase, [
     "social_worker",
   ]);

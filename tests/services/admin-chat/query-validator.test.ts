@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   checkDateRange,
   checkFilters,
+  coerceBoolean,
   resolveListColumns,
 } from "../../../src/services/admin-chat/query-validator.js";
 import { findTableDef } from "../../../src/services/admin-chat/schema-catalog.js";
 
 const agencyUsers = findTableDef("agency_users")!;
 const dailyLogAssignments = findTableDef("admin_chat_daily_log_assignments_named")!;
+const childrenPlacementStatus = findTableDef(
+  "admin_chat_children_placement_status",
+)!;
 
 describe("checkFilters", () => {
   it("allows a filter on an allowlisted column", () => {
@@ -93,5 +97,39 @@ describe("checkDateRange", () => {
         to: "2026-09-20",
       }),
     ).toContain("must not be after");
+  });
+});
+
+describe("coerceBoolean", () => {
+  it("passes a real boolean through unchanged", () => {
+    expect(coerceBoolean(true)).toBe(true);
+    expect(coerceBoolean(false)).toBe(false);
+  });
+
+  it("parses the strings 'true'/'false' case-insensitively", () => {
+    expect(coerceBoolean("true")).toBe(true);
+    expect(coerceBoolean("TRUE")).toBe(true);
+    expect(coerceBoolean("false")).toBe(false);
+  });
+
+  it("does not let an arbitrary non-empty string fall back to JS truthiness", () => {
+    expect(coerceBoolean("yes")).toBe(false);
+  });
+});
+
+describe("admin_chat_children_placement_status catalog entry", () => {
+  it("allows filtering by is_placed and status", () => {
+    expect(
+      checkFilters(childrenPlacementStatus, { is_placed: false }),
+    ).toBeNull();
+    expect(
+      checkFilters(childrenPlacementStatus, { status: "active" }),
+    ).toBeNull();
+  });
+
+  it("rejects a column it doesn't expose as filterable", () => {
+    expect(
+      checkFilters(childrenPlacementStatus, { date_of_birth: "2010-01-01" }),
+    ).toContain('Column "date_of_birth" is not filterable');
   });
 });

@@ -44,6 +44,21 @@ function textOf(blocks: AnthropicContentBlock[]): string {
     .trim();
 }
 
+/** A prior question + the plain-text answer Figgy gave for it, oldest first. */
+export type ChatHistoryTurn = { question: string; answerText: string };
+
+/** Alternating user/assistant messages for each prior turn, so a follow-up
+ * like "what about just the active ones?" resolves against what was asked
+ * (and answered) right before it, instead of being read in isolation. */
+function historyMessages(
+  history: ChatHistoryTurn[],
+): Array<{ role: "user" | "assistant"; content: string }> {
+  return history.flatMap((turn) => [
+    { role: "user" as const, content: turn.question },
+    { role: "assistant" as const, content: turn.answerText },
+  ]);
+}
+
 function buildPickSystemPrompt(): string {
   return [
     "You are Ask Figgy, a chat assistant for agency admins on FigApp, a UK foster care agency management platform.",
@@ -61,18 +76,23 @@ export type PickResult =
 
 /**
  * Call 1 — this is where the user's question actually gets "analyzed": the
- * model reads the question against the schema catalog and decides which
- * table/aggregation (if any) answers it. Our code never parses the question
- * itself; it only validates and executes whatever the model decided.
+ * model reads the question (plus recent prior turns, for follow-ups like
+ * "what about just the active ones?") against the schema catalog and
+ * decides which table/aggregation (if any) answers it. Our code never
+ * parses the question itself; it only validates and executes whatever the
+ * model decided.
  */
-export async function pickQuery(question: string): Promise<PickResult> {
+export async function pickQuery(
+  question: string,
+  history: ChatHistoryTurn[] = [],
+): Promise<PickResult> {
   const { content } = await callAnthropic({
     model: env.adminChatModel,
     max_tokens: 512,
     system: buildPickSystemPrompt(),
     tools: [buildQueryTool()],
     tool_choice: { type: "auto" },
-    messages: [{ role: "user", content: question }],
+    messages: [...historyMessages(history), { role: "user", content: question }],
   });
 
   const toolUse = content.find(
@@ -106,6 +126,7 @@ export async function composeAnswerText(
   toolCall: QueryToolCall,
   toolUseId: string,
   toolResult: QueryToolResult,
+  history: ChatHistoryTurn[] = [],
 ): Promise<string> {
   const toolResultText = JSON.stringify(
     toolResult.kind === "count"
@@ -119,6 +140,7 @@ export async function composeAnswerText(
     system: COMPOSE_SYSTEM_PROMPT,
     tools: [buildQueryTool()],
     messages: [
+      ...historyMessages(history),
       { role: "user", content: question },
       {
         role: "assistant",

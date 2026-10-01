@@ -151,7 +151,7 @@ export const ADMIN_CHAT_TABLES: AdminChatTableDef[] = [
   {
     table: "admin_chat_household_children_named",
     description:
-      "Which children are (or were) placed in which household, with names already joined in. Use for questions like 'how many children are placed', 'which household is <child> in', 'children with no current placement' (is_active false), etc.",
+      "Which children are (or were) placed in which household, with names already joined in — one row per placement EVENT, so a child who has NEVER been placed has no row here at all. Do NOT use this for 'how many children are unplaced' — filtering is_active=false here only finds children whose PAST placement ended, not children who were simply never placed (use admin_chat_children_placement_status for that). Use this table for 'which household is <child> in', placement start/end dates, or placement history questions instead.",
     columns: [
       "child_name",
       "household_name",
@@ -164,6 +164,24 @@ export const ADMIN_CHAT_TABLES: AdminChatTableDef[] = [
     filterableColumns: ["is_active"],
     dateRangeColumns: ["start_date", "end_date"],
     displayLabel: "child placements",
+  },
+  {
+    // Not a real Supabase table/view — runValidatedQuery special-cases this
+    // table name and answers it from application code instead of a raw
+    // passthrough query (see children-placement-status.ts). A child who's
+    // never been placed has no row at all in household_children, so "is
+    // this child placed" can't be expressed as a single-table filter the
+    // normal way; this is computed with two queries + a JS join instead of
+    // a new DB view, to avoid needing a migration for every question shaped
+    // like this one.
+    table: "admin_chat_children_placement_status",
+    description:
+      "Exactly one row per non-archived child (not per placement), with whether they currently have an active placement right now. This is the correct table for whole-population questions like 'how many children are placed/unplaced' or 'which children have no current placement' — unlike admin_chat_household_children_named (placement events only, no row at all for a child never placed), this always has a row for every child, so it's the only table that correctly counts children with zero placement history as unplaced. Use admin_chat_household_children_named instead for 'which household is <child> in' or placement-history questions.",
+    columns: ["id", "child_name", "status", "date_of_birth", "is_placed"],
+    filterableColumns: ["is_placed", "status"],
+    dateRangeColumns: [],
+    columnValues: { status: ["active", "inactive"] },
+    displayLabel: "children",
   },
   {
     table: "admin_chat_household_carers_named",

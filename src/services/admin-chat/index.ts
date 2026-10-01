@@ -6,7 +6,11 @@ import {
   insertAdminChatLog,
   listTodayAdminChatHistory,
 } from "../../repositories/admin-chat.js";
-import { composeAnswerText, pickQuery } from "./claude-client.js";
+import {
+  composeAnswerText,
+  pickQuery,
+  type ChatHistoryTurn,
+} from "./claude-client.js";
 import { runValidatedQuery } from "./query-validator.js";
 import { findTableDef } from "./schema-catalog.js";
 import { env } from "../../config/env.js";
@@ -17,6 +21,10 @@ import type {
 } from "../../types/admin-chat.js";
 
 const MAX_QUESTION_LENGTH = 300;
+/** How many prior turns to replay as context — enough for a short follow-up
+ * ("what about just the active ones?") to resolve, without the prompt
+ * growing with every question asked today. */
+const MAX_HISTORY_TURNS = 6;
 
 function stringifyRow(row: Record<string, unknown>): AdminChatRow {
   const out: AdminChatRow = {};
@@ -84,7 +92,14 @@ export async function askAdminChat(
     return serviceFailure({ rateLimited: true });
   }
 
-  const pick = await pickQuery(question);
+  const historyRes = await listTodayAdminChatHistory(supabase, userId, startOfTodayIso());
+  if (historyRes.error) return serviceFailure({ error: historyRes.error });
+  const history: ChatHistoryTurn[] = historyRes.data.slice(-MAX_HISTORY_TURNS).map((row) => ({
+    question: row.question,
+    answerText: (row.answer_json as AdminChatAnswer | null)?.text ?? row.answer ?? "",
+  }));
+
+  const pick = await pickQuery(question, history);
 
   if (!pick.matched) {
     const answer: AdminChatAnswer = { text: pick.declineText, stats: [], rows: [] };
@@ -129,6 +144,7 @@ export async function askAdminChat(
     pick.toolCall,
     pick.toolUseId,
     validated.result,
+    history,
   );
 
   const answer: AdminChatAnswer =
