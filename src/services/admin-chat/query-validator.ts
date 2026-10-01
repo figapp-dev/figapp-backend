@@ -4,6 +4,7 @@ import {
   countAllowlistedRows,
   listAllowlistedRows,
 } from "../../repositories/admin-chat.js";
+import { fetchChildrenPlacementStatus } from "./children-placement-status.js";
 import { toDateOnly } from "../../lib/dates.js";
 import type {
   QueryDateRange,
@@ -13,6 +14,10 @@ import type {
 
 const MAX_LIST_ROWS = 20;
 const DEFAULT_LIST_ROWS = 10;
+
+/** See the comment on this table's schema-catalog entry — answered from
+ * application code (two queries + a JS join), not a passthrough query. */
+const CHILDREN_PLACEMENT_STATUS_TABLE = "admin_chat_children_placement_status";
 
 export type ValidatedQueryResult =
   | { ok: true; result: QueryToolResult }
@@ -90,6 +95,16 @@ export async function runValidatedQuery(
     return { ok: false, reason: dateRangeError };
   }
 
+  if (toolCall.table === CHILDREN_PLACEMENT_STATUS_TABLE) {
+    return runChildrenPlacementStatusQuery(
+      supabase,
+      agencyId,
+      def,
+      toolCall,
+      requestedFilters,
+    );
+  }
+
   const filters = { ...requestedFilters, agency_id: agencyId };
 
   if (toolCall.aggregation === "count") {
@@ -119,4 +134,55 @@ export async function runValidatedQuery(
   );
   if (error) return { ok: false, reason: error.message };
   return { ok: true, result: { kind: "list", rows: data } };
+}
+
+/** See CHILDREN_PLACEMENT_STATUS_TABLE — filters/aggregates in JS over the
+ * two-query result instead of a passthrough table query. */
+async function runChildrenPlacementStatusQuery(
+  supabase: SupabaseClient,
+  agencyId: string,
+  def: AdminChatTableDef,
+  toolCall: QueryToolCall,
+  filters: Record<string, string | number | boolean>,
+): Promise<ValidatedQueryResult> {
+  const { data, error } = await fetchChildrenPlacementStatus(supabase, agencyId);
+  if (error) return { ok: false, reason: error.message };
+
+  let rows = data;
+  if ("is_placed" in filters) {
+    const wanted = coerceBoolean(filters.is_placed);
+    rows = rows.filter((row) => row.is_placed === wanted);
+  }
+  if ("status" in filters) {
+    rows = rows.filter((row) => row.status === filters.status);
+  }
+
+  if (toolCall.aggregation === "count") {
+    return { ok: true, result: { kind: "count", count: rows.length } };
+  }
+
+  const columnsRes = resolveListColumns(def, toolCall.columns);
+  if ("error" in columnsRes) {
+    return { ok: false, reason: columnsRes.error };
+  }
+
+  const limit = Math.min(toolCall.limit ?? DEFAULT_LIST_ROWS, MAX_LIST_ROWS);
+  const limitedRows = rows.slice(0, limit).map((row) => {
+    const picked: Record<string, unknown> = {};
+    for (const column of columnsRes.columns) {
+      picked[column] = (row as unknown as Record<string, unknown>)[column];
+    }
+    return picked;
+  });
+
+  return { ok: true, result: { kind: "list", rows: limitedRows } };
+}
+
+/** Claude's tool schema declares is_placed as boolean, but exported so a
+ * stray string "true"/"false" (or any other JSON-safe value) still resolves
+ * sanely instead of silently matching everything via Boolean(value). */
+export function coerceBoolean(value: string | number | boolean): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.trim().toLowerCase() === "true";
+  return Boolean(value);
 }
