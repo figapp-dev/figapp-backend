@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TABLES } from "../lib/tables.js";
+import type { HelpTopicRow, HelpTopicSummary } from "../services/admin-chat/help-topics.js";
 
 export type AgencyUserRoleRow = {
   user_id: string;
@@ -106,6 +107,33 @@ export async function countAllowlistedRows(
   }
   const { count, error } = await query;
   return { count: count ?? 0, error };
+}
+
+/** Summaries only (no body) — kept small since this goes into every pickQuery prompt. */
+export async function listActiveHelpTopics(
+  supabase: SupabaseClient,
+): Promise<{ data: HelpTopicSummary[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.ADMIN_CHAT_HELP_TOPICS)
+    .select("slug, title, platform")
+    .eq("is_active", true)
+    .order("title");
+
+  return { data: (data as HelpTopicSummary[] | null) ?? [], error };
+}
+
+export async function findHelpTopicBySlug(
+  supabase: SupabaseClient,
+  slug: string,
+): Promise<{ data: HelpTopicRow | null; error: Error | null }> {
+  const { data, error } = await supabase
+    .from(TABLES.ADMIN_CHAT_HELP_TOPICS)
+    .select("slug, title, platform, body")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  return { data: (data as HelpTopicRow | null) ?? null, error };
 }
 
 export async function listAllowlistedRows(

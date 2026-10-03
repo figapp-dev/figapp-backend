@@ -63,4 +63,5 @@ export const TABLES = {
 
   DAILY_LOG_ANSWERS: "daily_log_answers",
   ADMIN_CHAT_LOGS: "admin_chat_logs",
+  ADMIN_CHAT_HELP_TOPICS: "admin_chat_help_topics",
 } as const;
