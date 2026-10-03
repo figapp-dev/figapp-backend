@@ -39,6 +39,10 @@ export async function adminChatRoute(app: FastifyInstance) {
                 type: "array",
                 items: { type: "object", additionalProperties: { type: "string" } },
               },
+              suggestedQuestions: {
+                type: "array",
+                items: { type: "string" },
+              },
             },
           },
           ...errorResponses,
@@ -108,6 +112,10 @@ export async function adminChatRoute(app: FastifyInstance) {
                     rows: {
                       type: "array",
                       items: { type: "object", additionalProperties: { type: "string" } },
+                    },
+                    suggestedQuestions: {
+                      type: "array",
+                      items: { type: "string" },
                     },
                   },
                 },

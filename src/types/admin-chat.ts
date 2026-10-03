@@ -21,6 +21,7 @@ export type AdminChatAnswer = {
   text: string;
   stats: AdminChatStat[];
   rows: AdminChatRow[];
+  suggestedQuestions: string[];
 };
 
 export type QueryAggregation = "count" | "list";

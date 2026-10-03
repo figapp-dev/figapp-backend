@@ -3,11 +3,14 @@ import { serviceFailure, serviceSuccess } from "../../lib/service-result.js";
 import {
   countTodayAdminChatQuestions,
   findAgencyUserRoleByUserId,
+  findHelpTopicBySlug,
   insertAdminChatLog,
+  listActiveHelpTopics,
   listTodayAdminChatHistory,
 } from "../../repositories/admin-chat.js";
 import {
   composeAnswerText,
+  composeHelpAnswerText,
   pickQuery,
   type ChatHistoryTurn,
 } from "./claude-client.js";
@@ -99,10 +102,18 @@ export async function askAdminChat(
     answerText: (row.answer_json as AdminChatAnswer | null)?.text ?? row.answer ?? "",
   }));
 
-  const pick = await pickQuery(question, history);
+  const helpTopicsRes = await listActiveHelpTopics(supabase);
+  if (helpTopicsRes.error) return serviceFailure({ error: helpTopicsRes.error });
+
+  const pick = await pickQuery(question, history, helpTopicsRes.data);
 
   if (!pick.matched) {
-    const answer: AdminChatAnswer = { text: pick.declineText, stats: [], rows: [] };
+    const answer: AdminChatAnswer = {
+      text: pick.declineText,
+      stats: [],
+      rows: [],
+      suggestedQuestions: [],
+    };
     await insertAdminChatLog(supabase, {
       agency_id: caller.agency_id,
       user_id: userId,
@@ -117,6 +128,60 @@ export async function askAdminChat(
     return serviceSuccess<AdminChatAnswer>(answer);
   }
 
+  if (pick.kind === "help") {
+    const topicRes = await findHelpTopicBySlug(supabase, pick.slug);
+    if (topicRes.error) return serviceFailure({ error: topicRes.error });
+
+    if (!topicRes.data) {
+      const answer: AdminChatAnswer = {
+        text: "I couldn't find that — try rephrasing it.",
+        stats: [],
+        rows: [],
+        suggestedQuestions: [],
+      };
+      await insertAdminChatLog(supabase, {
+        agency_id: caller.agency_id,
+        user_id: userId,
+        question,
+        matched_table: null,
+        matched_aggregation: null,
+        matched_query: { kind: "help", slug: pick.slug },
+        answer: null,
+        answer_json: answer,
+        error: "help topic slug not found or inactive",
+      });
+      return serviceSuccess<AdminChatAnswer>(answer);
+    }
+
+    const helpComposed = await composeHelpAnswerText(
+      question,
+      pick.slug,
+      pick.toolUseId,
+      topicRes.data.body,
+      history,
+      helpTopicsRes.data,
+    );
+    const answer: AdminChatAnswer = {
+      text: helpComposed.text,
+      stats: [],
+      rows: [],
+      suggestedQuestions: helpComposed.suggestedQuestions,
+    };
+
+    await insertAdminChatLog(supabase, {
+      agency_id: caller.agency_id,
+      user_id: userId,
+      question,
+      matched_table: null,
+      matched_aggregation: null,
+      matched_query: { kind: "help", slug: pick.slug },
+      answer: helpComposed.text,
+      answer_json: answer,
+      error: null,
+    });
+    return serviceSuccess<AdminChatAnswer>(answer);
+  }
+
   const validated = await runValidatedQuery(supabase, caller.agency_id, pick.toolCall);
 
   if (!validated.ok) {
@@ -124,6 +189,7 @@ export async function askAdminChat(
       text: "I couldn't safely answer that question. Try rephrasing it.",
       stats: [],
       rows: [],
+      suggestedQuestions: [],
     };
     await insertAdminChatLog(supabase, {
       agency_id: caller.agency_id,
@@ -139,18 +205,19 @@ export async function askAdminChat(
     return serviceSuccess<AdminChatAnswer>(answer);
   }
 
-  const answerText = await composeAnswerText(
+  const composed = await composeAnswerText(
     question,
     pick.toolCall,
     pick.toolUseId,
     validated.result,
     history,
+    helpTopicsRes.data,
   );
 
   const answer: AdminChatAnswer =
     validated.result.kind === "count"
       ? {
-          text: answerText,
+          text: composed.text,
           stats: [
             {
               value: String(validated.result.count),
@@ -158,11 +225,13 @@ export async function askAdminChat(
             },
           ],
           rows: [],
+          suggestedQuestions: composed.suggestedQuestions,
         }
       : {
-          text: answerText,
+          text: composed.text,
           stats: [],
           rows: validated.result.rows.map(stringifyRow),
+          suggestedQuestions: composed.suggestedQuestions,
         };
 
   await insertAdminChatLog(supabase, {
@@ -178,7 +247,7 @@ export async function askAdminChat(
           ? validated.result.count
           : validated.result.rows.length,
     },
-    answer: answerText,
+    answer: composed.text,
     answer_json: answer,
     error: null,
   });
@@ -199,14 +268,13 @@ export async function getAdminChatHistory(supabase: SupabaseClient, userId: stri
   const historyRes = await listTodayAdminChatHistory(supabase, userId, startOfTodayIso());
   if (historyRes.error) return serviceFailure({ error: historyRes.error });
 
-  const items: AdminChatHistoryItem[] = historyRes.data.map((row) => ({
-    id: row.id,
-    question: row.question,
-    answer:
-      (row.answer_json as AdminChatAnswer | null) ??
-      ({ text: row.answer ?? "", stats: [], rows: [] } satisfies AdminChatAnswer),
-    createdAt: row.created_at,
-  }));
+  const items: AdminChatHistoryItem[] = historyRes.data.map((row) => {
+    const stored = row.answer_json as AdminChatAnswer | null;
+    const answer: AdminChatAnswer = stored
+      ? { ...stored, suggestedQuestions: stored.suggestedQuestions ?? [] }
+      : { text: row.answer ?? "", stats: [], rows: [], suggestedQuestions: [] };
+    return { id: row.id, question: row.question, answer, createdAt: row.created_at };
+  });
 
   return serviceSuccess(items);
 }
